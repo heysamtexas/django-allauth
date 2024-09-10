@@ -46,16 +46,25 @@ class UserSessionManager(models.Manager):
 
         with transaction.atomic():
             session, created = UserSession.objects.get_or_create(
-                session_key=request.session.session_key,
-                defaults=defaults
+                session_key=request.session.session_key, defaults=defaults
             )
 
             if not created:
                 if session.ip != defaults["ip"]:
-                    ip_changed.send(sender=UserSession, session=session, from_ip=session.ip, to_ip=defaults["ip"])
+                    ip_changed.send(
+                        sender=UserSession,
+                        session=session,
+                        from_ip=session.ip,
+                        to_ip=defaults["ip"],
+                    )
 
                 if session.user_agent != defaults["user_agent"]:
-                    user_agent_changed.send(sender=UserSession, session=session, from_user_agent=session.user_agent, to_user_agent=defaults["user_agent"])
+                    user_agent_changed.send(
+                        sender=UserSession,
+                        session=session,
+                        from_user_agent=session.user_agent,
+                        to_user_agent=defaults["user_agent"],
+                    )
 
                 session.user = defaults["user"]
                 session.ip = defaults["ip"]
