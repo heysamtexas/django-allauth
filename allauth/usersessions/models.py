@@ -3,15 +3,16 @@ from importlib import import_module
 from django.conf import settings
 from django.contrib.auth import get_user
 from django.core.exceptions import ImproperlyConfigured
-from django.db import models
+from django.db import models, transaction
 from django.http import HttpRequest
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
 from allauth import app_settings as allauth_settings
+from allauth.usersessions import app_settings
 from allauth.account.adapter import get_adapter
 from allauth.core import context
-
+from allauth.usersessions.signals import ip_changed, user_agent_changed
 
 if not allauth_settings.USERSESSIONS_ENABLED:
     raise ImproperlyConfigured(
@@ -36,15 +37,32 @@ class UserSessionManager(models.Manager):
         ua = request.META.get("HTTP_USER_AGENT", "")[
             0 : UserSession._meta.get_field("user_agent").max_length
         ]
-        UserSession.objects.update_or_create(
-            session_key=request.session.session_key,
-            defaults=dict(
-                user=request.user,
-                ip=get_adapter().get_client_ip(request),
-                user_agent=ua,
-                last_seen_at=timezone.now(),
-            ),
+
+        defaults = dict(
+            user=request.user,
+            ip=get_adapter().get_client_ip(request),
+            user_agent=ua,
         )
+
+        with transaction.atomic():
+            session, created = UserSession.objects.get_or_create(
+                session_key=request.session.session_key,
+                defaults=defaults
+            )
+
+            if not created:
+                if session.ip != defaults["ip"]:
+                    ip_changed.send(sender=UserSession, session=session, from_ip=session.ip, to_ip=defaults["ip"])
+
+                if session.user_agent != defaults["user_agent"]:
+                    user_agent_changed.send(sender=UserSession, session=session, from_user_agent=session.user_agent, to_user_agent=defaults["user_agent"])
+
+                session.user = defaults["user"]
+                session.ip = defaults["ip"]
+                session.user_agent = defaults["user_agent"]
+                session.last_seen_at = timezone.now()
+
+                session.save()
 
 
 class UserSession(models.Model):
