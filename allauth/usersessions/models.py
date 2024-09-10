@@ -12,6 +12,7 @@ from allauth import app_settings as allauth_settings
 from allauth.account.adapter import get_adapter
 from allauth.core import context
 
+
 if not allauth_settings.USERSESSIONS_ENABLED:
     raise ImproperlyConfigured(
         "allauth.usersessions not installed, yet its models are imported."
@@ -43,7 +44,10 @@ class UserSessionManager(models.Manager):
         )
 
         with transaction.atomic():
-            from allauth.usersessions.signals import ip_changed, user_agent_changed
+            from allauth.usersessions.signals import (
+                ip_changed,
+                user_agent_changed,
+            )
 
             session, created = UserSession.objects.get_or_create(
                 session_key=request.session.session_key, defaults=defaults
