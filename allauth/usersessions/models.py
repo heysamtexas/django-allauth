@@ -9,7 +9,6 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
 from allauth import app_settings as allauth_settings
-from allauth.usersessions import app_settings
 from allauth.account.adapter import get_adapter
 from allauth.core import context
 from allauth.usersessions.signals import ip_changed, user_agent_changed
