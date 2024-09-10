@@ -11,7 +11,6 @@ from django.utils.translation import gettext_lazy as _
 from allauth import app_settings as allauth_settings
 from allauth.account.adapter import get_adapter
 from allauth.core import context
-from allauth.usersessions.signals import ip_changed, user_agent_changed
 
 if not allauth_settings.USERSESSIONS_ENABLED:
     raise ImproperlyConfigured(
@@ -44,6 +43,8 @@ class UserSessionManager(models.Manager):
         )
 
         with transaction.atomic():
+            from allauth.usersessions.signals import ip_changed, user_agent_changed
+
             session, created = UserSession.objects.get_or_create(
                 session_key=request.session.session_key, defaults=defaults
             )
