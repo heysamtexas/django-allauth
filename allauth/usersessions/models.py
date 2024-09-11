@@ -1,4 +1,3 @@
-from copy import deepcopy
 from importlib import import_module
 
 from django.conf import settings
@@ -52,7 +51,15 @@ class UserSessionManager(models.Manager):
             )
 
             if not created:
-                from_session = deepcopy(session)
+                from_session = UserSession(
+                    session_key=session.session_key,
+                    user=session.user,
+                    ip=session.ip,
+                    user_agent=session.user_agent,
+                    data=session.data,
+                    created_at=session.created_at,
+                    last_seen_at=session.last_seen_at,
+                )
                 # Update session
                 session.user = defaults["user"]
                 session.ip = defaults["ip"]
@@ -67,6 +74,7 @@ class UserSessionManager(models.Manager):
                 ):
                     session_client_changed.send(
                         sender=UserSession,
+                        request=request,
                         from_session=from_session,
                         to_session=session,
                     )

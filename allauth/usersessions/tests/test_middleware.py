@@ -68,7 +68,7 @@ def test_mw_change_ip_and_useragent(rf, db, user):
     # Set up signal receiver
     signal_received = []
 
-    def signal_handler(sender, from_session, to_session, **kwargs):
+    def signal_handler(sender, request, from_session, to_session, **kwargs):
         signal_received.append((from_session, to_session))
 
     session_client_changed.connect(signal_handler)
