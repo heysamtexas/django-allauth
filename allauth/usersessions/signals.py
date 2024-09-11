@@ -5,11 +5,8 @@ from allauth.account import app_settings
 from .models import UserSession
 
 
-# Provides the arguments "session", "from_user_agent", "to_user_agent"
-user_agent_changed = Signal()
-
-# Provides the arguments "session", "from_ip", "to_ip"
-ip_changed = Signal()
+# Provides the arguments "from_session", "to_session"
+session_client_changed = Signal()
 
 
 def on_user_logged_in(sender, **kwargs):
