@@ -262,7 +262,7 @@ msgstr "Atsarginis raktas"
 #: mfa/adapter.py:144
 #, python-brace-format
 msgid "Key nr. {number}"
-msgstr "Rakto nr. {numeris}"
+msgstr "Rakto nr. {number}"
 
 #: mfa/apps.py:9
 msgid "MFA"
