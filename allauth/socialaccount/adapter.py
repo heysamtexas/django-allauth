@@ -318,7 +318,7 @@ class DefaultSocialAccountAdapter(BaseAdapter):
 
     def is_email_verified(self, provider, email):
         """
-        Returns ``True`` iff the given email encountered during a social
+        Returns ``True`` if the given email encountered during a social
         login for the given provider is to be assumed verified.
 
         This can be configured with a ``"verified_email"`` key in the provider
@@ -344,7 +344,7 @@ class DefaultSocialAccountAdapter(BaseAdapter):
 
     def can_authenticate_by_email(self, login, email):
         """
-        Returns ``True`` iff  authentication by email is active for this login/email.
+        Returns ``True`` if  authentication by email is active for this login/email.
 
         This can be configured with a ``"email_authentication"`` key in the provider
         app settings, or a ``"VERIFIED_EMAIL"`` in the global provider settings
