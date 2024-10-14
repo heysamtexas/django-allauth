@@ -3,6 +3,10 @@ import { useConfig } from '../auth'
 import * as allauth from '../lib/allauth'
 import Button from '../components/Button'
 
+function formatDate(timestamp) {
+  return timestamp ? new Date(timestamp * 1000).toLocaleString() : 'N/A';
+}
+
 export default function Sessions () {
   const config = useConfig()
   const [sessions, setSessions] = useState([])
@@ -54,10 +58,12 @@ export default function Sessions () {
           {sessions.map((session, i) => {
             return (
               <tr key={i}>
-                <td>{new Date(session.created_at).toLocaleString()}</td>
+                <td>{formatDate(session.created_at)}</td>
                 <td>{session.ip}</td>
                 <td>{session.user_agent}</td>
-                {config.data.usersessions.track_activity ? <td>{session.last_seen_at}</td> : null}
+                {config.data.usersessions.track_activity && (
+                  <td>{formatDate(session.last_seen_at)}</td>
+                )}
                 <td>{session.is_current ? '⭐' : ''}</td>
                 <td><Button onClick={() => logout([session])}>Logout</Button></td>
               </tr>
