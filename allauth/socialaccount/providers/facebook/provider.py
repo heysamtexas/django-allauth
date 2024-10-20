@@ -2,6 +2,7 @@ import string
 from typing import TYPE_CHECKING
 from urllib.parse import quote
 
+import requests
 from django.contrib.auth import REDIRECT_FIELD_NAME
 from django.middleware.csrf import get_token
 from django.template.loader import render_to_string
@@ -227,13 +228,13 @@ class FacebookProvider(OAuth2Provider):
         if not any([access_token, id_token]):
             raise get_adapter().validation_error("invalid_token")
 
-        if access_token:
-            return super().verify_token(request, token)
-        else:
-            try:
+        try:
+            if access_token:
+                return flows.verify_token(request, self, access_token)
+            else:
                 return flows.verify_limited_login_token(request, self, id_token)
-            except OAuth2Error as e:
-                raise get_adapter().validation_error("invalid_token") from e
+        except (OAuth2Error, requests.RequestException) as e:
+            raise get_adapter().validation_error("invalid_token") from e
 
 
 provider_classes = [FacebookProvider]

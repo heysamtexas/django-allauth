@@ -1,6 +1,5 @@
 import hashlib
 import hmac
-import time
 from datetime import timedelta
 from typing import TYPE_CHECKING
 
@@ -13,7 +12,6 @@ from allauth.socialaccount.internal import jwtkit
 from allauth.socialaccount.models import SocialLogin, SocialToken
 from allauth.socialaccount.providers.base import Provider
 from allauth.socialaccount.providers.facebook.constants import GRAPH_API_URL
-from allauth.socialaccount.providers.oauth2.client import OAuth2Error
 
 if TYPE_CHECKING:
     from .provider import FacebookProvider
@@ -168,38 +166,14 @@ def verify_limited_login_token(
     `provider.sociallogin_from_response` to be handled as normal.
     """
 
-    app = provider.app
-
+    # note: this already does replay protection internally
     jwt_data = jwtkit.verify_and_decode(
         credential=id_token,
         keys_url=provider.limited_login_jwks_url,
         issuer=provider.limited_login_expected_jwt_issuer,
-        audience=app.client_id,
+        audience=provider.app.client_id,
         lookup_kid=jwtkit.lookup_kid_jwk,
     )
-
-    # replay protection - if a JWT is somehow compromised and the user logs out,
-    # we want to make sure that an attacker can't reuse that JWT to log back in,
-    # thus make all JWTs single-use
-    cache_key = "allauth.facebook.jwt_consumed-{provider_id}-{jwt_id}".format(
-        provider_id=provider.id,
-        jwt_id=jwt_data["jti"],
-    )
-
-    if cache.has_key(cache_key):
-        # fine to raise this without translating - upstream will re-raise
-        # an `invalid_token` error from the adapter, so this message is internal-only
-        raise OAuth2Error("id_token already used")
-    else:
-        timeout = int(jwt_data["exp"] - time.time())
-
-        cache.set(
-            key=cache_key,
-            value=True,
-            # note: using max just in case the JWT is used in its last second
-            # to avoid setting a timeout of zero (which may mean "infinity"?)
-            timeout=max(timeout, 1),
-        )
 
     fake_response = {
         graph_field: jwt_data[jwt_field]
