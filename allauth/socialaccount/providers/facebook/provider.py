@@ -1,8 +1,8 @@
+import requests
 import string
 from typing import TYPE_CHECKING
 from urllib.parse import quote
 
-import requests
 from django.contrib.auth import REDIRECT_FIELD_NAME
 from django.middleware.csrf import get_token
 from django.template.loader import render_to_string
@@ -31,7 +31,9 @@ from allauth.socialaccount.providers.facebook.views import (
 from allauth.socialaccount.providers.oauth2.client import OAuth2Error
 from allauth.socialaccount.providers.oauth2.provider import OAuth2Provider
 from allauth.utils import import_callable
+
 from .locale import get_default_locale_callable
+
 
 if TYPE_CHECKING:
     from django.http import HttpRequest
