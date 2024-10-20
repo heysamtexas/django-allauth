@@ -1,7 +1,6 @@
 import hashlib
 import hmac
 from datetime import timedelta
-from typing import TYPE_CHECKING
 
 from django.core.cache import cache
 from django.http import HttpRequest

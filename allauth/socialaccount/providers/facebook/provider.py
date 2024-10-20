@@ -1,6 +1,5 @@
 import requests
 import string
-from typing import TYPE_CHECKING
 from urllib.parse import quote
 
 from django.contrib.auth import REDIRECT_FIELD_NAME
@@ -33,10 +32,6 @@ from allauth.socialaccount.providers.oauth2.provider import OAuth2Provider
 from allauth.utils import import_callable
 
 from .locale import get_default_locale_callable
-
-
-if TYPE_CHECKING:
-    from django.http import HttpRequest
 
 
 class FacebookAccount(ProviderAccount):
@@ -216,7 +211,7 @@ class FacebookProvider(OAuth2Provider):
             ret.append(EmailAddress(email=email, verified=False, primary=True))
         return ret
 
-    def verify_token(self, request: HttpRequest, token: dict):
+    def verify_token(self, request, token: dict):
         """
         Verifies both normal oAuth2-style "access_token"s as well
         as OIDC-style "Limited Login" JWTs.
