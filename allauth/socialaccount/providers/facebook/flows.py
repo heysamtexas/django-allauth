@@ -13,9 +13,6 @@ from allauth.socialaccount.models import SocialLogin, SocialToken
 from allauth.socialaccount.providers.base import Provider
 from allauth.socialaccount.providers.facebook.constants import GRAPH_API_URL
 
-if TYPE_CHECKING:
-    from .provider import FacebookProvider
-
 
 # maps fields from the Limited Login JWT to Graph API response fields
 JWT_FIELD_TO_GRAPH_API_FIELD_MAP = {
@@ -155,7 +152,7 @@ def verify_token(
 
 
 def verify_limited_login_token(
-    request: HttpRequest, provider: FacebookProvider, id_token: str
+    request: HttpRequest, provider, id_token: str
 ) -> SocialLogin:
     """
     Verifies a Facebook Limited Login token.
