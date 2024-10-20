@@ -62,7 +62,9 @@ class FacebookProvider(OAuth2Provider):
     # TODO: populate these from https://www.facebook.com/.well-known/openid-configuration/
     #  just like in a normal OIDC provider (as that's what "Limited Login" really is)
     limited_login_expected_jwt_issuer = "https://www.facebook.com"
-    limited_login_jwks_url = "https://limited.facebook.com/.well-known/oauth/openid/jwks/"
+    limited_login_jwks_url = (
+        "https://limited.facebook.com/.well-known/oauth/openid/jwks/"
+    )
 
     def __init__(self, *args, **kwargs):
         self._locale_callable_cache = None
