@@ -610,6 +610,7 @@ class DefaultAccountAdapter(BaseAdapter):
         )
         ctx = {
             "request": context.request,
+            "email": email,
             "signup_url": signup_url,
             "password_reset_url": password_reset_url,
         }
