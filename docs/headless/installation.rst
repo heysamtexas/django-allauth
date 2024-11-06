@@ -18,12 +18,10 @@ In your ``settings.py``, include::
       ...
   ]
 
-  # These are the URLs to be implemented by your single-page application.
-  HEADLESS_FRONTEND_URLS = {
-      "account_confirm_email": "https://app.project.org/account/verify-email/{key}",
-      "account_reset_password_from_key": "https://app.org/account/password/reset/key/{key}",
-      "account_signup": "https://app.org/account/signup",
-  }
+  # Implement HEADLESS_FRONTEND_URLS for your single-page application. 
+  # Which urls you have to implement depends on your application, you can
+  # find them in the configuration docs.
+   
 
 
 Your project ``urls.py`` should include::
