@@ -73,7 +73,7 @@ def validate_totp_code(secret: str, code: str) -> bool:
         return True
     counters = hotp_counters_from_time()
     for counter in counters:
-        value = hotp_value(secret, counter())
+        value = hotp_value(secret, counter)
         if code == format_hotp_value(value):
             return True
     return False
