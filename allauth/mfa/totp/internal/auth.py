@@ -30,14 +30,14 @@ def get_totp_secret(regenerate: bool = False) -> str:
     return secret
 
 
-def hotp_counters_from_time() -> list[int]:
-    counters = []
+def hotp_counters_from_time() -> set[int]:
+    counters = set()
     current_time = int(time.time())  # Get the current Unix timestamp
 
     for i in range(0, app_settings.TOTP_TOLERANCE + 1):
         time_delta = i * app_settings.TOTP_PERIOD
-        counters.append((current_time - time_delta) // app_settings.TOTP_PERIOD)
-        counters.append((current_time + time_delta) // app_settings.TOTP_PERIOD)
+        counters.add((current_time - time_delta) // app_settings.TOTP_PERIOD)
+        counters.add((current_time + time_delta) // app_settings.TOTP_PERIOD)
 
     return counters
 
@@ -72,7 +72,7 @@ def validate_totp_code(secret: str, code: str) -> bool:
     if _is_insecure_bypass(code):
         return True
     counters = hotp_counters_from_time()
-    for counter in counters:
+    for counter in list(counters):
         value = hotp_value(secret, counter)
         if code == format_hotp_value(value):
             return True
