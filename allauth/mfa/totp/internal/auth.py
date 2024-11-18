@@ -4,6 +4,7 @@ import hmac
 import secrets
 import struct
 import time
+from typing import Set
 
 from django.core.cache import cache
 
@@ -30,7 +31,7 @@ def get_totp_secret(regenerate: bool = False) -> str:
     return secret
 
 
-def hotp_counters_from_time() -> set[int]:
+def hotp_counters_from_time() -> Set[int]:
     counters = set()
     current_time = int(time.time())  # Get the current Unix timestamp
 
