@@ -8,7 +8,6 @@ from allauth.mfa.totp.internal.auth import (
 )
 
 from allauth.mfa import app_settings
-from allauth.mfa.utils import decrypt, encrypt
 
 
 @mock.patch("time.time", mock.MagicMock(return_value=1731948631))
