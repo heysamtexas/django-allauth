@@ -1,18 +1,24 @@
 from unittest import mock
-from allauth.mfa.totp.internal.auth import format_hotp_value, generate_totp_secret, hotp_counters_from_time, hotp_value, validate_totp_code
+from allauth.mfa.totp.internal.auth import (
+    format_hotp_value,
+    generate_totp_secret,
+    hotp_counters_from_time,
+    hotp_value,
+    validate_totp_code,
+)
 
 from allauth.mfa import app_settings
 from allauth.mfa.utils import decrypt, encrypt
 
 
-@mock.patch('time.time', mock.MagicMock(return_value=1731948631))
+@mock.patch("time.time", mock.MagicMock(return_value=1731948631))
 def test_totp_counters_from_time():
     app_settings.TOTP_TOLERANCE = 0
     counters = hotp_counters_from_time()
     assert len(counters) == 1
 
 
-@mock.patch('time.time', mock.MagicMock(return_value=1731948631))
+@mock.patch("time.time", mock.MagicMock(return_value=1731948631))
 def test_totp_counters_from_time_with_tolerance():
     app_settings.TOTP_TOLERANCE = 1
     counters = hotp_counters_from_time()
@@ -20,7 +26,7 @@ def test_totp_counters_from_time_with_tolerance():
     assert len(counters) == 3
 
 
-@mock.patch('time.time', mock.MagicMock(return_value=1731948631))
+@mock.patch("time.time", mock.MagicMock(return_value=1731948631))
 def test_validate_with_tolerance():
     app_settings.TOTP_TOLERANCE = 1
     test_secret = generate_totp_secret()
