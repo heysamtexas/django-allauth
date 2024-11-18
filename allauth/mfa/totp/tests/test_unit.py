@@ -1,4 +1,6 @@
 from unittest import mock
+
+from allauth.mfa import app_settings
 from allauth.mfa.totp.internal.auth import (
     format_hotp_value,
     generate_totp_secret,
@@ -6,8 +8,6 @@ from allauth.mfa.totp.internal.auth import (
     hotp_value,
     validate_totp_code,
 )
-
-from allauth.mfa import app_settings
 
 
 @mock.patch("time.time", mock.MagicMock(return_value=1731948631))
