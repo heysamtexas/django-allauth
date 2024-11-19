@@ -4,7 +4,7 @@ import hmac
 import secrets
 import struct
 import time
-from typing import Set
+from typing import Iterator
 
 from django.core.cache import cache
 
@@ -31,16 +31,11 @@ def get_totp_secret(regenerate: bool = False) -> str:
     return secret
 
 
-def hotp_counters_from_time() -> Set[int]:
-    counters = set()
+def yield_hotp_counters_from_time() -> Iterator[int]:
     current_time = int(time.time())  # Get the current Unix timestamp
-
-    for i in range(0, app_settings.TOTP_TOLERANCE + 1):
-        time_delta = i * app_settings.TOTP_PERIOD
-        counters.add((current_time - time_delta) // app_settings.TOTP_PERIOD)
-        counters.add((current_time + time_delta) // app_settings.TOTP_PERIOD)
-
-    return counters
+    counter = current_time // app_settings.TOTP_PERIOD
+    for i in range(-app_settings.TOTP_TOLERANCE, app_settings.TOTP_TOLERANCE + 1):
+        yield counter + i
 
 
 def hotp_value(secret: str, counter: int) -> int:
@@ -72,8 +67,8 @@ def _is_insecure_bypass(code: str) -> bool:
 def validate_totp_code(secret: str, code: str) -> bool:
     if _is_insecure_bypass(code):
         return True
-    counters = hotp_counters_from_time()
-    for counter in list(counters):
+    counters = yield_hotp_counters_from_time()
+    for counter in counters:
         value = hotp_value(secret, counter)
         if code == format_hotp_value(value):
             return True
