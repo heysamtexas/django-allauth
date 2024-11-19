@@ -4,9 +4,9 @@ from allauth.mfa import app_settings
 from allauth.mfa.totp.internal.auth import (
     format_hotp_value,
     generate_totp_secret,
-    yield_hotp_counters_from_time,
     hotp_value,
     validate_totp_code,
+    yield_hotp_counters_from_time,
 )
 
 
