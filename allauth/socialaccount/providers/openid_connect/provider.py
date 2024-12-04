@@ -1,6 +1,7 @@
 from django.urls import reverse
 from django.utils.http import urlencode
 
+from allauth import app_settings
 from allauth.account.models import EmailAddress
 from allauth.socialaccount.providers.base import ProviderAccount
 from allauth.socialaccount.providers.oauth2.provider import OAuth2Provider
@@ -56,7 +57,31 @@ class OpenIDConnectProvider(OAuth2Provider):
         return ["openid", "profile", "email"]
 
     def extract_uid(self, data):
-        return str(data["sub"])
+        uid_field = "sub"
+        uid_field_from_settings = self.app.settings.get("uid_field")
+
+        if not uid_field_from_settings:
+            settings = app_settings.PROVIDERS.get(self.app.provider, {})
+            uid_field_from_settings = settings.get("UID_FIELD")
+
+        if uid_field_from_settings:
+            split = uid_field_from_settings.split(".")
+
+            temp_data = data
+
+            for key in split:
+                key_value = temp_data.get(key)
+
+                if key_value is None:
+                    temp_data = None
+                    break
+                else:
+                    temp_data = temp_data.get(key)
+
+            if temp_data is not None and isinstance(temp_data, str) and uid_field in temp_data:
+                uid_field = temp_data
+
+        return str(data[uid_field])
 
     def extract_common_fields(self, data):
         return dict(
