@@ -1,7 +1,9 @@
 from django.urls import reverse
 
+from allauth import app_settings
 from allauth.account.internal.decorators import login_not_required
 from allauth.socialaccount.adapter import get_adapter
+from allauth.socialaccount.internal import jwtkit
 from allauth.socialaccount.models import SocialToken
 from allauth.socialaccount.providers.oauth2.views import (
     OAuth2Adapter,
@@ -47,13 +49,36 @@ class OpenIDConnectOAuth2Adapter(OAuth2Adapter):
         return self.openid_config["userinfo_endpoint"]
 
     def complete_login(self, request, app, token: SocialToken, **kwargs):
-        response = (
-            get_adapter()
-            .get_requests_session()
-            .get(self.profile_url, headers={"Authorization": "Bearer " + token.token})
-        )
-        response.raise_for_status()
-        extra_data = response.json()
+        store_id_token = app.settings.get("store_id_token")
+
+        if store_id_token is None:
+            settings = app_settings.PROVIDERS.get(app.provider, {})
+            store_id_token = settings.get("STORE_ID_TOKEN", False)
+
+        # If store_id_token is set to True and the token response contains an id_token the
+        # id_token is stored in extra data rather than the data from the userinfo endpoint
+        if store_id_token and "id_token" in kwargs["response"]:
+            client_id = app.client_id
+
+            id_token = jwtkit.verify_and_decode(
+                credential=kwargs["response"]["id_token"],
+                keys_url=f"{self.openid_config['jwks_uri']}?appid={client_id}",
+                issuer=self.openid_config["issuer"],
+                audience=client_id,
+                lookup_kid=jwtkit.lookup_kid_jwk,
+            )
+
+            extra_data = id_token
+        else:
+            response = (
+                get_adapter()
+                .get_requests_session()
+                .get(
+                    self.profile_url, headers={"Authorization": "Bearer " + token.token}
+                )
+            )
+            response.raise_for_status()
+            extra_data = response.json()
         return self.get_provider().sociallogin_from_response(request, extra_data)
 
     def get_callback_url(self, request, app):
