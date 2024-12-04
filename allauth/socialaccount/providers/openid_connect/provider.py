@@ -78,7 +78,11 @@ class OpenIDConnectProvider(OAuth2Provider):
                 else:
                     temp_data = temp_data.get(key)
 
-            if temp_data is not None and isinstance(temp_data, str) and uid_field in temp_data:
+            if (
+                temp_data is not None
+                and isinstance(temp_data, str)
+                and uid_field in temp_data
+            ):
                 uid_field = temp_data
 
         return str(data[uid_field])
