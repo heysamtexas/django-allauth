@@ -52,7 +52,7 @@ class OpenIDConnectOAuth2Adapter(OAuth2Adapter):
         store_id_token = app.settings.get("store_id_token")
 
         if store_id_token is None:
-            settings = app_settings.PROVIDERS.get(app.provider, {})
+            settings = self.get_provider().get_settings()
             store_id_token = settings.get("STORE_ID_TOKEN", False)
 
         # If store_id_token is set to True and the token response contains an id_token the
@@ -79,6 +79,7 @@ class OpenIDConnectOAuth2Adapter(OAuth2Adapter):
             )
             response.raise_for_status()
             extra_data = response.json()
+
         return self.get_provider().sociallogin_from_response(request, extra_data)
 
     def get_callback_url(self, request, app):

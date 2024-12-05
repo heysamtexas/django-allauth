@@ -61,8 +61,10 @@ class OpenIDConnectProvider(OAuth2Provider):
         uid_field_from_settings = self.app.settings.get("uid_field")
 
         if not uid_field_from_settings:
-            settings = app_settings.PROVIDERS.get(self.app.provider, {})
+            settings = self.get_settings()
             uid_field_from_settings = settings.get("UID_FIELD")
+
+        uid_value = None
 
         if uid_field_from_settings:
             split = uid_field_from_settings.split(".")
@@ -70,22 +72,18 @@ class OpenIDConnectProvider(OAuth2Provider):
             temp_data = data
 
             for key in split:
-                key_value = temp_data.get(key)
-
-                if key_value is None:
+                if key in temp_data:
+                    temp_data = temp_data[key]
+                else:
                     temp_data = None
                     break
-                else:
-                    temp_data = temp_data.get(key)
 
-            if (
-                temp_data is not None
-                and isinstance(temp_data, str)
-                and uid_field in temp_data
-            ):
-                uid_field = temp_data
+            if temp_data is not None:
+                uid_value = temp_data
+            else:
+                uid_value = data[uid_field]
 
-        return str(data[uid_field])
+        return str(uid_value)
 
     def extract_common_fields(self, data):
         return dict(
