@@ -6,6 +6,8 @@ Fixes
 
 - Headless: When using email verification by code, you could incorrectly
   encounter a 409 when attempting to add a new email address while logged in.
+- Added support for storing id_token in extra data when using openid_connect provider.
+- Added support for mapping a custom uid field from extra data when using openid_connect provider.
 
 
 65.3.0 (2024-11-30)
