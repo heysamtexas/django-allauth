@@ -2,6 +2,7 @@ import base64
 import hashlib
 import json
 import random
+from unittest.mock import patch
 import requests
 import uuid
 import warnings
@@ -397,6 +398,8 @@ class OpenIDConnectTests(OAuth2TestsMixin):
         "authorization_endpoint": "/login",
         "userinfo_endpoint": "/userinfo",
         "token_endpoint": "/token",
+        "jwks_uri": "/jwks",
+        "issuer": "https://issuer.example.com",
     }
     userinfo_content = {
         "picture": "https://secure.gravatar.com/avatar/123",
@@ -412,6 +415,27 @@ class OpenIDConnectTests(OAuth2TestsMixin):
         "identities": [],
         "name": "Ness",
     }
+    id_token = {
+        "email": "ness@some.oidc.server.onett.example",
+        "sub": 2187,
+        "oid": 7812,
+        "nested": {"nested": {"oid": 9999}},
+        "roles": [],
+        "preferred_username": "Ness",
+    }
+
+    def get_id_token(self):
+        return self.id_token
+
+    def get_login_response_json(self, with_refresh_token=True):
+        response = {
+            "uid": uuid.uuid4().hex,
+            "access_token": self.get_access_token(),
+            "id_token": self.get_id_token(),
+        }
+        if with_refresh_token:
+            response["refresh_token"] = self.get_refresh_token()
+        return json.dumps(response)
 
     def mocked_response(self, *responses):
         return mocked_response(*responses, callback=self._mocked_responses)
@@ -446,3 +470,135 @@ class OpenIDConnectTests(OAuth2TestsMixin):
         self.assertRedirects(resp, "/accounts/profile/", fetch_redirect_response=False)
         sa = SocialAccount.objects.get(provider=self.app.provider_id)
         self.assertDictEqual(sa.extra_data, self.extra_data)
+
+    def test_store_id_token_global(self):
+        provider_settings = app_settings.PROVIDERS.get(self.app.provider, {})
+        provider_settings_with_store_id_token_enabled = provider_settings.copy()
+        provider_settings_with_store_id_token_enabled["STORE_ID_TOKEN"] = True
+
+        with self.settings(
+            SOCIALACCOUNT_PROVIDERS={
+                self.app.provider: provider_settings_with_store_id_token_enabled
+            }
+        ):
+            with patch(
+                "allauth.socialaccount.providers.openid_connect.views.jwtkit"
+            ) as jwtkit:
+                pass
+                jwtkit.verify_and_decode.return_value = self.get_id_token()
+                resp = self.login()
+                self.assertRedirects(
+                    resp, "/accounts/profile/", fetch_redirect_response=False
+                )
+                sa = SocialAccount.objects.get(provider=self.app.provider_id)
+                self.assertDictEqual(sa.extra_data, self.id_token)
+
+    def test_store_id_token_local(self):
+        settings = self.app.settings.copy()
+        settings["store_id_token"] = True
+
+        SocialApp.objects.filter(provider_id=self.app.provider_id).update(
+            settings=settings
+        )
+
+        with patch(
+            "allauth.socialaccount.providers.openid_connect.views.jwtkit"
+        ) as jwtkit:
+            pass
+            jwtkit.verify_and_decode.return_value = self.get_id_token()
+            resp = self.login()
+            self.assertRedirects(
+                resp, "/accounts/profile/", fetch_redirect_response=False
+            )
+            sa = SocialAccount.objects.get(provider=self.app.provider_id)
+            self.assertDictEqual(sa.extra_data, self.id_token)
+
+    def test_uid_field_global(self):
+        provider_settings = app_settings.PROVIDERS.get(self.app.provider, {})
+        provider_settings_with_uid_field = provider_settings.copy()
+        provider_settings_with_uid_field["STORE_ID_TOKEN"] = True
+        provider_settings_with_uid_field["UID_FIELD"] = "oid"
+
+        with self.settings(
+            SOCIALACCOUNT_PROVIDERS={
+                self.app.provider: provider_settings_with_uid_field
+            }
+        ):
+            with patch(
+                "allauth.socialaccount.providers.openid_connect.views.jwtkit"
+            ) as jwtkit:
+                pass
+                jwtkit.verify_and_decode.return_value = self.get_id_token()
+                resp = self.login()
+                self.assertRedirects(
+                    resp, "/accounts/profile/", fetch_redirect_response=False
+                )
+                sa = SocialAccount.objects.get(provider=self.app.provider_id)
+                self.assertEqual(sa.uid, str(self.id_token["oid"]))
+
+    def test_uid_field_local(self):
+        settings = self.app.settings.copy()
+        settings["store_id_token"] = True
+        settings["uid_field"] = "oid"
+
+        SocialApp.objects.filter(provider_id=self.app.provider_id).update(
+            settings=settings
+        )
+
+        with patch(
+            "allauth.socialaccount.providers.openid_connect.views.jwtkit"
+        ) as jwtkit:
+            pass
+            jwtkit.verify_and_decode.return_value = self.get_id_token()
+            resp = self.login()
+            self.assertRedirects(
+                resp, "/accounts/profile/", fetch_redirect_response=False
+            )
+            sa = SocialAccount.objects.get(provider=self.app.provider_id)
+            self.assertEqual(sa.uid, str(self.id_token["oid"]))
+
+    def test_uid_field_dotted_notation(self):
+        provider_settings = app_settings.PROVIDERS.get(self.app.provider, {})
+        provider_settings_with_uid_field = provider_settings.copy()
+        provider_settings_with_uid_field["STORE_ID_TOKEN"] = True
+        provider_settings_with_uid_field["UID_FIELD"] = "nested.nested.oid"
+
+        with self.settings(
+            SOCIALACCOUNT_PROVIDERS={
+                self.app.provider: provider_settings_with_uid_field
+            }
+        ):
+            with patch(
+                "allauth.socialaccount.providers.openid_connect.views.jwtkit"
+            ) as jwtkit:
+                pass
+                jwtkit.verify_and_decode.return_value = self.get_id_token()
+                resp = self.login()
+                self.assertRedirects(
+                    resp, "/accounts/profile/", fetch_redirect_response=False
+                )
+                sa = SocialAccount.objects.get(provider=self.app.provider_id)
+                self.assertEqual(sa.uid, str(self.id_token["nested"]["nested"]["oid"]))
+
+    def test_uid_field_dotted_notation_sub_value_fallback(self):
+        provider_settings = app_settings.PROVIDERS.get(self.app.provider, {})
+        provider_settings_with_uid_field = provider_settings.copy()
+        provider_settings_with_uid_field["STORE_ID_TOKEN"] = True
+        provider_settings_with_uid_field["UID_FIELD"] = "not.a.value"
+
+        with self.settings(
+            SOCIALACCOUNT_PROVIDERS={
+                self.app.provider: provider_settings_with_uid_field
+            }
+        ):
+            with patch(
+                "allauth.socialaccount.providers.openid_connect.views.jwtkit"
+            ) as jwtkit:
+                pass
+                jwtkit.verify_and_decode.return_value = self.get_id_token()
+                resp = self.login()
+                self.assertRedirects(
+                    resp, "/accounts/profile/", fetch_redirect_response=False
+                )
+                sa = SocialAccount.objects.get(provider=self.app.provider_id)
+                self.assertEqual(sa.uid, str(self.id_token["sub"]))
