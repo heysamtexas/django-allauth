@@ -1,7 +1,6 @@
 from django.urls import reverse
 from django.utils.http import urlencode
 
-from allauth import app_settings
 from allauth.account.models import EmailAddress
 from allauth.socialaccount.providers.base import ProviderAccount
 from allauth.socialaccount.providers.oauth2.provider import OAuth2Provider

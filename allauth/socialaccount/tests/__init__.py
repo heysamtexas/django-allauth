@@ -2,10 +2,10 @@ import base64
 import hashlib
 import json
 import random
-from unittest.mock import patch
 import requests
 import uuid
 import warnings
+from unittest.mock import patch
 from urllib.parse import parse_qs, urlparse
 
 from django.conf import settings

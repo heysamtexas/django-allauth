@@ -1,6 +1,5 @@
 from django.urls import reverse
 
-from allauth import app_settings
 from allauth.account.internal.decorators import login_not_required
 from allauth.socialaccount.adapter import get_adapter
 from allauth.socialaccount.internal import jwtkit
