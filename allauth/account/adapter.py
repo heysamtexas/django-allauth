@@ -202,7 +202,7 @@ class DefaultAccountAdapter(BaseAdapter):
 
     def get_signup_redirect_url(self, request):
         """
-        Returns the default URL to redirect to after directly after signing up.
+        Returns the default URL to redirect to directly after signing up.
         """
         return resolve_url(app_settings.SIGNUP_REDIRECT_URL)
 
