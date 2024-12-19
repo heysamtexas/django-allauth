@@ -51,7 +51,9 @@ class OpenIDConnectProvider(OAuth2Provider):
             kwargs={"provider_id": self.app.provider_id},
         )
 
-    def get_logout_url(self, request, original_url: str, logout_data: Any) -> Optional[str]:
+    def get_logout_url(
+        self, request, original_url: str, logout_data: Any
+    ) -> Optional[str]:
         """
         Returns a logout URL if an RP-initiated logout needs to be done.
 
