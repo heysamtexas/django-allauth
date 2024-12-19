@@ -517,7 +517,7 @@ class DefaultAccountAdapter(BaseAdapter):
         signal_kwargs,
         email,
         signup,
-        redirect_url
+        redirect_url,
     ):
         if not user.is_active:
             return self.respond_user_inactive(request, user)
@@ -531,7 +531,7 @@ class DefaultAccountAdapter(BaseAdapter):
         signal_kwargs,
         email,
         signup,
-        redirect_url
+        redirect_url,
     ):
         if signal_kwargs is not None and "sociallogin" in signal_kwargs:
             self.stash_logout_data_from_token(request, signal_kwargs["sociallogin"])
