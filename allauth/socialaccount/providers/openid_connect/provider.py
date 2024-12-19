@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Any
 
 from django.urls import reverse
 from django.utils.http import urlencode
@@ -51,12 +51,12 @@ class OpenIDConnectProvider(OAuth2Provider):
             kwargs={"provider_id": self.app.provider_id},
         )
 
-    def get_logout_url(self, request, original_url: str) -> Optional[str]:
+    def get_logout_url(self, request, original_url: str, logout_data: Any) -> Optional[str]:
         """
         Returns a logout URL if an RP-initiated logout needs to be done.
 
         Returns None if no logout is possible (not configured,
-        not logged in with this provider, id_token not stashed, etc).
+        not logged in with this provider, etc).
 
         This is meant to be called by the account adapter's
         `get_logout_redirect_url` method.
@@ -73,20 +73,17 @@ class OpenIDConnectProvider(OAuth2Provider):
             # we could be called without the user being authed,
             # in this case do nothing
             if request.user.is_authenticated:
-                # if the logout_data was stashed by us previously
-                if id_token := request.session.pop("_allauth_logout_data"):
+                # use it to build a URI as per https://openid.net/specs/openid-connect-rpinitiated-1_0.html#RPLogout  # noqa: E501
+                params = {
+                    "id_token_hint": logout_data,
+                    "post_logout_redirect_uri": request.build_absolute_uri(
+                        original_url
+                    ),
+                    "client_id": self.app.client_id,
+                    "ui_locales": get_language(),
+                }
 
-                    # use it to build a URI as per https://openid.net/specs/openid-connect-rpinitiated-1_0.html#RPLogout  # noqa: E501
-                    params = {
-                        "id_token_hint": id_token,
-                        "post_logout_redirect_uri": request.build_absolute_uri(
-                            original_url
-                        ),
-                        "client_id": self.app.client_id,
-                        "ui_locales": get_language(),
-                    }
-
-                    return logout_url + "?" + urlencode(params)
+                return logout_url + "?" + urlencode(params)
 
     @property
     def token_auth_method(self):

@@ -260,11 +260,15 @@ class DefaultAccountAdapter(BaseAdapter):
 
             # if this is a custom provider supporting generation of a logout URL
             if hasattr(provider, "get_logout_url"):
-                if provider_logout_url := provider.get_logout_url(
-                    request, original_url
-                ):
-                    # if the provider gave us a custom logout URL, return that
-                    return provider_logout_url
+                # if logout data was stashed previously
+                if logout_data := request.session.pop('_allauth_logout_data'):
+
+                    # if the provider gave us a custom logout URL...
+                    if provider_logout_url := provider.get_logout_url(
+                            request, original_url, logout_data
+                        ):
+                            # ...return it
+                            return provider_logout_url
 
         # otherwise fallback to the default
         # could be that a logout-capable provider isn't in use,
