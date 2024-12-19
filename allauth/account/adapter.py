@@ -38,7 +38,6 @@ from allauth.core import context, ratelimit
 from allauth.core.internal.adapter import BaseAdapter
 from allauth.core.internal.httpkit import headed_redirect_response
 from allauth.utils import generate_unique_username, import_attribute
-from allauth.socialaccount.adapter import get_adapter as get_socialaccount_adapter
 
 
 class DefaultAccountAdapter(BaseAdapter):
@@ -252,6 +251,11 @@ class DefaultAccountAdapter(BaseAdapter):
         # if there is a social login...
         if social_records:
             social_record = social_records[0]
+
+            # circular import
+            from allauth.socialaccount.adapter import (
+                get_adapter as get_socialaccount_adapter,
+            )
 
             # ...get its provider instance
             provider = get_socialaccount_adapter(request).get_provider(
