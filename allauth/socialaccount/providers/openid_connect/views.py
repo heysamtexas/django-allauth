@@ -1,3 +1,5 @@
+from typing import Optional
+
 from django.urls import reverse
 
 from allauth.account.internal.decorators import login_not_required
@@ -45,6 +47,30 @@ class OpenIDConnectOAuth2Adapter(OAuth2Adapter):
     @property
     def profile_url(self):
         return self.openid_config["userinfo_endpoint"]
+
+    @property
+    def end_session_endpoint(self) -> Optional[str]:
+        """
+        The "RP-initiated logout" endpoint, from the autodiscovered config.
+        """
+        return self.openid_config.get("end_session_endpoint")
+
+    def parse_token(self, data: dict):
+        """
+        Capture and stash the `id_token` on the SocialToken for use elsewhere.
+
+        The default account adapter will read this and move to the request's session
+        later on during the login process. We can't easily do it in this class
+        as we're not always told whether this is an actual *login* or merely
+        connecting an additional social account to an existing user
+        (we only want to do this on an actual *login*), thus we let the adapter do it.
+        """
+        token = super().parse_token(data)
+
+        if "id_token" in data:
+            token.logout_data = data["id_token"]
+
+        return token
 
     def complete_login(self, request, app, token: SocialToken, **kwargs):
         response = (

@@ -1,5 +1,8 @@
+from typing import Optional
+
 from django.urls import reverse
 from django.utils.http import urlencode
+from django.utils.translation import get_language
 
 from allauth.account.models import EmailAddress
 from allauth.socialaccount.providers.base import ProviderAccount
@@ -47,6 +50,43 @@ class OpenIDConnectProvider(OAuth2Provider):
             self.app.provider + "_callback",
             kwargs={"provider_id": self.app.provider_id},
         )
+
+    def get_logout_url(self, request, original_url: str) -> Optional[str]:
+        """
+        Returns a logout URL if an RP-initiated logout needs to be done.
+
+        Returns None if no logout is possible (not configured,
+        not logged in with this provider, id_token not stashed, etc).
+
+        This is meant to be called by the account adapter's
+        `get_logout_redirect_url` method.
+        """
+
+        adapter = self.get_oauth2_adapter(request)
+
+        logout_url = adapter.end_session_endpoint or self.app.settings.get(
+            "end_session_endpoint"
+        )
+
+        # if a logout URL was discovered from the provider or from settings
+        if logout_url:
+            # we could be called without the user being authed,
+            # in this case do nothing
+            if request.user.is_authenticated:
+                # if the logout_data was stashed by us previously
+                if id_token := request.session.pop("_allauth_logout_data"):
+
+                    # use it to build a URI as per https://openid.net/specs/openid-connect-rpinitiated-1_0.html#RPLogout  # noqa: E501
+                    params = {
+                        "id_token_hint": id_token,
+                        "post_logout_redirect_uri": request.build_absolute_uri(
+                            original_url
+                        ),
+                        "client_id": self.app.client_id,
+                        "ui_locales": get_language(),
+                    }
+
+                    return logout_url + "?" + urlencode(params)
 
     @property
     def token_auth_method(self):

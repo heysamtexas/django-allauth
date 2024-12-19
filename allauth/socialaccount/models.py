@@ -169,6 +169,12 @@ class SocialToken(models.Model):
         blank=True, null=True, verbose_name=_("expires at")
     )
 
+    # stashed by the adapter during a login
+    # this is opaque and is only meant to be consumed by the same provider
+    # that originally obtained the token. This is a runtime attribute only
+    # and is not persisted in the database (the adapter persists it in the session).
+    logout_data: Optional[Any]
+
     class Meta:
         unique_together = ("app", "account")
         verbose_name = _("social application token")

@@ -33,10 +33,12 @@ from django.utils.translation import gettext_lazy as _
 
 from allauth import app_settings as allauth_app_settings
 from allauth.account import app_settings, signals
+from allauth.account.authentication import get_authentication_records
 from allauth.core import context, ratelimit
 from allauth.core.internal.adapter import BaseAdapter
 from allauth.core.internal.httpkit import headed_redirect_response
 from allauth.utils import generate_unique_username, import_attribute
+from allauth.socialaccount.adapter import get_adapter as get_socialaccount_adapter
 
 
 class DefaultAccountAdapter(BaseAdapter):
@@ -223,14 +225,68 @@ class DefaultAccountAdapter(BaseAdapter):
             url = settings.LOGIN_REDIRECT_URL
         return resolve_url(url)
 
-    def get_logout_redirect_url(self, request):
+    def get_logout_redirect_url(self, request) -> str:
         """
         Returns the URL to redirect to after the user logs out. Note that
         this method is also invoked if you attempt to log out while no users
         is logged in. Therefore, request.user is not guaranteed to be an
         authenticated user.
+
+        We check if we logged in with a social provider, and if so,
+        let it generate the URL, if any.
+
+        This opens the possibility for social providers to also log the user out
+        of the underlying third-party. The `openid_connect` provider uses this.
         """
-        return resolve_url(app_settings.LOGOUT_REDIRECT_URL)
+        original_url = resolve_url(app_settings.LOGOUT_REDIRECT_URL)
+
+        # these records are stored by AllAuth and used for its "reauth"
+        # functionality where it can ask for your password again if doing
+        # a sensitive operation or after N minutes of inactivity
+        records = get_authentication_records(request)
+
+        # we narrow it down to social logins only, and that way
+        # we can tell which provider was used to initiate this session
+        social_records = list(filter(lambda r: r["method"] == "socialaccount", records))
+
+        # if there is a social login...
+        if social_records:
+            social_record = social_records[0]
+
+            # ...get its provider instance
+            provider = get_socialaccount_adapter(request).get_provider(
+                request, provider=social_record["provider"]
+            )
+
+            # if this is a custom provider supporting generation of a logout URL
+            if hasattr(provider, "get_logout_url"):
+                if provider_logout_url := provider.get_logout_url(
+                    request, original_url
+                ):
+                    # if the provider gave us a custom logout URL, return that
+                    return provider_logout_url
+
+        # otherwise fallback to the default
+        # could be that a logout-capable provider isn't in use,
+        # or that this session can't be logged out for whatever reason
+        # (the provider is meant to return None if it's not able to do it)
+        return original_url
+
+    def stash_logout_data_from_token(self, request, social_login) -> None:
+        """
+        Stash the `SocialLogin.token.logout_data`, if any, to the request's session.
+        That attribute is optional and is set by logout-capable providers
+        such as the `openid_connect` provider.
+
+        Note that we only stash the data - we do not interpret it in any way.
+        This data is opaque to us and is only meant to be consumed by the same
+        provider that initially set it.
+        """
+
+        if social_login.token is not None and hasattr(
+            social_login.token, "logout_data"
+        ):
+            request.session["_allauth_logout_data"] = social_login.token.logout_data
 
     def get_email_verification_redirect_url(self, email_address):
         """
@@ -477,6 +533,9 @@ class DefaultAccountAdapter(BaseAdapter):
         signup,
         redirect_url
     ):
+        if signal_kwargs is not None and "sociallogin" in signal_kwargs:
+            self.stash_logout_data_from_token(request, signal_kwargs["sociallogin"])
+
         from .utils import get_login_redirect_url
 
         response = HttpResponseRedirect(
