@@ -468,7 +468,7 @@ class OpenIDConnectTests(OAuth2TestsMixin):
 
         resp = self.client.post(login_url)
 
-        self.assertEquals(resp.status_code, 404)
+        self.assertEqual(resp.status_code, 404)
 
         # same with the callback endpoint - inlining OpenIDConnectProvider.get_callback_url
         callback_url = reverse(
@@ -483,4 +483,4 @@ class OpenIDConnectTests(OAuth2TestsMixin):
         # note: callback is a GET endpoint
         resp = self.client.get(callback_url)
 
-        self.assertEquals(resp.status_code, 404)
+        self.assertEqual(resp.status_code, 404)
