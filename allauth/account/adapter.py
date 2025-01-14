@@ -708,6 +708,10 @@ class DefaultAccountAdapter(BaseAdapter):
             ip = x_forwarded_for.split(",")[0]
         else:
             ip = request.META.get("REMOTE_ADDR")
+
+        if ip and ":" in ip:  # in case ip has a port number
+            ip = ip.split(":")[0]
+
         return ip
 
     def get_http_user_agent(self, request):
