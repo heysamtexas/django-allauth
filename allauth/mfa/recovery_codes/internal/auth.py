@@ -54,7 +54,9 @@ class RecoveryCodes:
         byte_count = min(app_settings.RECOVERY_CODE_DIGITS // 2, h.digest_size)
         for i in range(app_settings.RECOVERY_CODE_COUNT):
             h.update((f"{i:3},").encode("utf-8"))
-            value = int.from_bytes(h.digest()[:byte_count], byteorder="big", signed=False)
+            value = int.from_bytes(
+                h.digest()[:byte_count], byteorder="big", signed=False
+            )
             value %= 10**app_settings.RECOVERY_CODE_DIGITS
             fmt_value = str(value).zfill(app_settings.RECOVERY_CODE_DIGITS)
             ret.append(fmt_value)
