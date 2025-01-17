@@ -1,7 +1,6 @@
 import binascii
 import hmac
 import os
-import struct
 from hashlib import sha1
 from typing import List, Optional
 
