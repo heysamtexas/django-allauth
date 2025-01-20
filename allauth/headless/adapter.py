@@ -5,9 +5,10 @@ from django.forms.fields import Field
 from allauth.account.models import EmailAddress
 from allauth.account.utils import user_display, user_username
 from allauth.core.internal.adapter import BaseAdapter
+from allauth.core.internal.httpkit import get_frontend_url
 from allauth.headless import app_settings
 from allauth.utils import import_attribute
-from allauth.core.internal.httpkit import get_frontend_url
+
 
 class DefaultHeadlessAdapter(BaseAdapter):
     """The adapter class allows you to override various functionality of the
