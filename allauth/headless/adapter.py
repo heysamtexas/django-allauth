@@ -5,7 +5,7 @@ from django.forms.fields import Field
 from allauth.account.models import EmailAddress
 from allauth.account.utils import user_display, user_username
 from allauth.core.internal.adapter import BaseAdapter
-from allauth.core.internal.httpkit import get_frontend_url
+from allauth.core.internal.httpkit import default_get_frontend_url
 from allauth.headless import app_settings
 from allauth.utils import import_attribute
 
@@ -50,9 +50,9 @@ class DefaultHeadlessAdapter(BaseAdapter):
             ret["username"] = username
         return ret
 
-    def get_frontend_url(self, urlname, **kwargs):
+    def get_frontend_url(self, request, urlname, **kwargs):
         """Return the frontend URL for the given URL name."""
-        return get_frontend_url(self.request, urlname, **kwargs)
+        return default_get_frontend_url(request, urlname, **kwargs)
 
 
 def get_adapter():
