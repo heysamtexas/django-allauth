@@ -1,7 +1,7 @@
 from django.dispatch import Signal
 
 from allauth.mfa.adapter import get_adapter
-from allauth.mfa.utils import is_mfa_enabled
+from allauth.mfa.utils import is_mfa_enabled, block_email_registering
 
 
 # Emitted when an authenticator is added.
@@ -18,6 +18,6 @@ authenticator_reset = Signal()
 
 
 def on_add_email(sender, email, user, **kwargs):
-    if is_mfa_enabled(user):
+    if is_mfa_enabled(user) and block_email_registering(email):
         adapter = get_adapter()
         raise adapter.validation_error("add_email_blocked")

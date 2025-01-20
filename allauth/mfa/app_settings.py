@@ -86,6 +86,13 @@ class AppSettings:
             "PASSKEY_SIGNUP_ENABLED", False
         )
 
+    @property
+    def DO_NOT_BLOCK_REGISTERING(self):
+        """
+        Allow registering even if MFA is enabled for a user.
+        This can be insecure.
+        """
+        return self._setting("DO_NOT_BLOCK_REGISTERING", False)
 
 _app_settings = AppSettings("MFA_")
 

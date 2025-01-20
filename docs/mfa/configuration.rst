@@ -55,3 +55,6 @@ Available settings:
   local development and testing. To work around that, you can use this setting.
   Only use this for development, never on production. See commit ``8b979313``
   over at ``fido2``.
+
+``MFA_DO_NOT_BLOCK_REGISTERING`` (default: ``False``)
+  Allow registering even if MFA is enabled for a user. This can be insecure.

@@ -157,6 +157,12 @@ class DefaultMFAAdapter(BaseAdapter):
             "name": self._get_user_identifier(user),
         }
 
+    def block_email_registering(self, user) -> bool:
+        """Allows to disable email registration block for users with MFA enabled."""
+        if app_settings.DO_NOT_BLOCK_REGISTERING:
+            return False
+        return True
+
 
 def get_adapter() -> DefaultMFAAdapter:
     return import_attribute(app_settings.ADAPTER)()
