@@ -96,14 +96,15 @@ def default_get_frontend_url(request, urlname, **kwargs):
             return render_url(request, url, **kwargs)
     return None
 
+
 def get_frontend_url(request, urlname, **kwargs):
     from allauth import app_settings as allauth_settings
 
     if allauth_settings.HEADLESS_ENABLED:
         from allauth.headless.adapter import get_adapter
+
         return get_adapter().get_frontend_url(request, urlname, **kwargs)
     return default_get_frontend_url(request, urlname, **kwargs)
-    
 
 
 def headed_redirect_response(viewname):
