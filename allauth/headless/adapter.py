@@ -7,7 +7,7 @@ from allauth.account.utils import user_display, user_username
 from allauth.core.internal.adapter import BaseAdapter
 from allauth.headless import app_settings
 from allauth.utils import import_attribute
-
+from allauth.core.internal.httpkit import get_frontend_url
 
 class DefaultHeadlessAdapter(BaseAdapter):
     """The adapter class allows you to override various functionality of the
@@ -48,6 +48,10 @@ class DefaultHeadlessAdapter(BaseAdapter):
         if username:
             ret["username"] = username
         return ret
+
+    def get_frontend_url(self, urlname, **kwargs):
+        """Return the frontend URL for the given URL name."""
+        return get_frontend_url(self.request, urlname, **kwargs)
 
 
 def get_adapter():
