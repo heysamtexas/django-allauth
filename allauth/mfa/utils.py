@@ -12,5 +12,6 @@ def decrypt(encrypted_text):
 def is_mfa_enabled(user, types=None):
     return get_adapter().is_mfa_enabled(user, types=types)
 
+
 def block_email_registering(user):
     return get_adapter().block_email_registering(user)

@@ -94,6 +94,7 @@ class AppSettings:
         """
         return self._setting("DO_NOT_BLOCK_REGISTERING", False)
 
+
 _app_settings = AppSettings("MFA_")
 
 

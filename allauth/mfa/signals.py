@@ -1,7 +1,7 @@
 from django.dispatch import Signal
 
 from allauth.mfa.adapter import get_adapter
-from allauth.mfa.utils import is_mfa_enabled, block_email_registering
+from allauth.mfa.utils import block_email_registering, is_mfa_enabled
 
 
 # Emitted when an authenticator is added.
