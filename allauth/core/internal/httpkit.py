@@ -103,7 +103,7 @@ def get_frontend_url(request, urlname, **kwargs):
     if allauth_settings.HEADLESS_ENABLED:
         from allauth.headless.adapter import get_adapter
 
-        return get_adapter().get_frontend_url(urlname, **kwargs)
+        return get_adapter().get_frontend_url(request, urlname, **kwargs)
     return default_get_frontend_url(request, urlname, **kwargs)
 
 
