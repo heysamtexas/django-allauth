@@ -261,7 +261,7 @@ class BaseSignupForm(_base_signup_form_class()):  # type: ignore[misc]
     )
 
     def __init__(self, *args, **kwargs):
-        email_required = kwargs.pop("email_required", app_settings.EMAIL_REQUIRED)
+        self.email_required = kwargs.pop("email_required", app_settings.EMAIL_REQUIRED)
         self.username_required = kwargs.pop(
             "username_required", app_settings.USERNAME_REQUIRED
         )
@@ -291,7 +291,8 @@ class BaseSignupForm(_base_signup_form_class()):  # type: ignore[misc]
                     }
                 ),
             )
-        if email_required:
+
+        if self.email_required:
             self.fields["email"].label = gettext("Email")
             self.fields["email"].required = True
         else:
@@ -307,7 +308,18 @@ class BaseSignupForm(_base_signup_form_class()):  # type: ignore[misc]
                     "password2",  # ignored when not present
                 ]
 
-        if not self.username_required:
+        if self.username_required:
+            self.fields["username"].label = gettext("Username")
+            self.fields["username"].required = True
+        else:
+            self.fields["username"].label = gettext("Username (optional)")
+            self.fields["username"].required = False
+            self.fields["username"].widget.is_required = False
+
+        if app_settings.AUTHENTICATION_METHOD not in (app_settings.AuthenticationMethod.EMAIL, app_settings.AuthenticationMethod.USERNAME_EMAIL):
+            del self.fields["email"]
+
+        if app_settings.AUTHENTICATION_METHOD not in (app_settings.AuthenticationMethod.USERNAME, app_settings.AuthenticationMethod.USERNAME_EMAIL):
             del self.fields["username"]
 
         set_form_field_order(
@@ -355,6 +367,9 @@ class BaseSignupForm(_base_signup_form_class()):  # type: ignore[misc]
             email2 = cleaned_data.get("email2")
             if (email and email2) and email != email2:
                 self.add_error("email2", _("You must type the same email each time."))
+        if not (self.email_required or self.username_required):
+            if all(cleaned_data.get("username", None), cleaned_data.get("email", None)):
+                self.add_error(None, _("One of username or email is required."))
         return cleaned_data
 
     def custom_signup(self, request, user):

@@ -112,6 +112,10 @@ class AppSettings:
         return self._setting("CHANGE_EMAIL", False)
 
     @property
+    def AUTHENTICATION_METHOD(self):
+        return self.AuthenticationMethod(self._setting("AUTHENTICATION_METHOD", self.AuthenticationMethod.USERNAME))
+
+    @property
     def LOGIN_METHODS(self) -> FrozenSet[LoginMethod]:
         methods = self._setting("LOGIN_METHODS", None)
         if methods is None:
