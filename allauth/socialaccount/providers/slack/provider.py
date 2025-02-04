@@ -34,7 +34,7 @@ class SlackProvider(OAuth2Provider):
         ret = []
         email = data.get("email")
         if email:
-            verified = bool(data.get("email_verified") or data.get("verified_email"))
+            verified = data.get("email_verified")
             ret.append(EmailAddress(email=email, verified=verified, primary=True))
         return ret
 
