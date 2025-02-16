@@ -11,6 +11,7 @@ from django.utils.translation import gettext, gettext_lazy as _, pgettext
 from allauth.account.app_settings import LoginMethod
 from allauth.account.internal import flows
 from allauth.account.internal.stagekit import LOGIN_SESSION_KEY
+from allauth.account.internal.textkit import compare_code
 from allauth.account.stages import EmailVerificationStage
 from allauth.core import context, ratelimit
 from allauth.utils import get_username_max_length, set_form_field_order
@@ -95,7 +96,7 @@ class LoginForm(forms.Form):
 
     def __init__(self, *args, **kwargs):
         self.request = kwargs.pop("request", None)
-        super(LoginForm, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         if app_settings.LOGIN_METHODS == {LoginMethod.EMAIL}:
             login_widget = forms.EmailInput(
                 attrs={
@@ -595,29 +596,15 @@ class ResetPasswordForm(forms.Form):
             flows.signup.send_unknown_account_mail(request, email)
             return email
 
-        adapter: DefaultAccountAdapter = get_adapter()
-        token_generator = kwargs.get("token_generator", default_token_generator)
-        for user in self.users:
-            temp_key = token_generator.make_token(user)
-
-            # send the password reset email
-            uid = user_pk_to_url_str(user)
-            # We intentionally pass an opaque `key` on the interface here, and
-            # not implementation details such as a separate `uidb36` and
-            # `key. Ideally, this should have done on `urls` level as well.
-            key = f"{uid}-{temp_key}"
-            url = adapter.get_reset_password_from_key_url(key)
-            context = {
-                "user": user,
-                "password_reset_url": url,
-                "uid": uid,
-                "key": temp_key,
-                "request": request,
-            }
-
-            if LoginMethod.USERNAME in app_settings.LOGIN_METHODS:
-                context["username"] = user_username(user)
-            adapter.send_password_reset_mail(user, email, context)
+        if app_settings.PASSWORD_RESET_BY_CODE_ENABLED:
+            flows.password_reset_by_code.PasswordResetVerificationProcess.initiate(
+                request=request, user=self.users[0], email=email
+            )
+        else:
+            token_generator = kwargs.get("token_generator", default_token_generator)
+            flows.password_reset.request_password_reset(
+                request, email, self.users, token_generator
+            )
         return email
 
 
@@ -628,7 +615,7 @@ class ResetPasswordKeyForm(PasswordVerificationMixin, forms.Form):
     def __init__(self, *args, **kwargs):
         self.user = kwargs.pop("user", None)
         self.temp_key = kwargs.pop("temp_key", None)
-        super(ResetPasswordKeyForm, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.fields["password1"].user = self.user
 
     def save(self):
@@ -721,7 +708,7 @@ class BaseConfirmCodeForm(forms.Form):
 
     def clean_code(self):
         code = self.cleaned_data.get("code")
-        if not flows.login_by_code.compare_code(actual=code, expected=self.code):
+        if not compare_code(actual=code, expected=self.code):
             raise get_adapter().validation_error("incorrect_code")
         return code
 
@@ -731,4 +718,8 @@ class ConfirmLoginCodeForm(BaseConfirmCodeForm):
 
 
 class ConfirmEmailVerificationCodeForm(BaseConfirmCodeForm):
+    pass
+
+
+class ConfirmPasswordResetCodeForm(BaseConfirmCodeForm):
     pass

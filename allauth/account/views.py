@@ -20,6 +20,7 @@ from allauth.account.forms import (
     ChangePasswordForm,
     ConfirmEmailVerificationCodeForm,
     ConfirmLoginCodeForm,
+    ConfirmPasswordResetCodeForm,
     LoginForm,
     ReauthenticateForm,
     RequestLoginCodeForm,
@@ -568,6 +569,11 @@ class PasswordResetView(NextRedirectMixin, AjaxCapableProcessFormViewMixin, Form
     form_class = ResetPasswordForm
     success_url = reverse_lazy("account_reset_password_done")
 
+    def get_success_url(self):
+        if not app_settings.PASSWORD_RESET_BY_CODE_ENABLED:
+            return super().get_success_url()
+        return self.passthrough_next_url(reverse("account_confirm_password_reset_code"))
+
     def get_form_class(self):
         return get_form_class(app_settings.FORMS, "reset_password", self.form_class)
 
@@ -704,6 +710,115 @@ class PasswordResetFromKeyDoneView(TemplateView):
 
 
 password_reset_from_key_done = PasswordResetFromKeyDoneView.as_view()
+
+
+@method_decorator(rate_limit(action="reset_password_from_key"), name="dispatch")
+@method_decorator(login_not_required, name="dispatch")
+class CompletePasswordResetView(
+    NextRedirectMixin,
+    FormView,
+):
+    template_name = "account/password_reset_from_key." + app_settings.TEMPLATE_EXTENSION
+    form_class = ResetPasswordKeyForm
+    success_url = reverse_lazy("account_reset_password_from_key_done")
+
+    def dispatch(self, request, **kwargs):
+        self._process = (
+            flows.password_reset_by_code.PasswordResetVerificationProcess.resume(
+                request
+            )
+        )
+        if not self._process:
+            return HttpResponseRedirect(
+                self.passthrough_next_url(reverse("account_reset_password"))
+            )
+        if not self._process.state.get("code_confirmed"):
+            return HttpResponseRedirect(reverse("account_confirm_password_reset_code"))
+        return super().dispatch(request, **kwargs)
+
+    def get_form_class(self):
+        return get_form_class(
+            app_settings.FORMS, "reset_password_from_key", self.form_class
+        )
+
+    def get_context_data(self, **kwargs):
+        ret = super().get_context_data(**kwargs)
+        ret["action_url"] = reverse("account_complete_password_reset")
+        return ret
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs["user"] = self._process.user
+        return kwargs
+
+    def form_valid(self, form):
+        form.save()
+        flows.password_reset.finalize_password_reset(self.request, self._process.user)
+        if app_settings.LOGIN_ON_PASSWORD_RESET:
+            return perform_login(
+                self.request,
+                self.process.user,
+            )
+        return super().form_valid(form)
+
+
+complete_password_reset = CompletePasswordResetView.as_view()
+
+
+class ConfirmPasswordResetCodeView(NextRedirectMixin, FormView):
+    template_name = (
+        "account/confirm_password_reset_code." + app_settings.TEMPLATE_EXTENSION
+    )
+    form_class = ConfirmPasswordResetCodeForm
+
+    def dispatch(self, request, *args, **kwargs):
+        self.process = (
+            flows.password_reset_by_code.PasswordResetVerificationProcess.resume(
+                request
+            )
+        )
+        if not self.process:
+            return HttpResponseRedirect(reverse("account_login"))
+        if self.process.state.get("code_confirmed"):
+            return HttpResponseRedirect(reverse("account_complete_password_reset"))
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_form_class(self):
+        return get_form_class(
+            app_settings.FORMS, "confirm_password_reset_code", self.form_class
+        )
+
+    def get_form_kwargs(self):
+        ret = super().get_form_kwargs()
+        ret["code"] = self.process.code
+        return ret
+
+    def get_context_data(self, **kwargs):
+        ret = super().get_context_data(**kwargs)
+        ret["email"] = self.process.state["email"]
+        return ret
+
+    def form_valid(self, form):
+        self.process.state["code_confirmed"] = True
+        self.process.persist()
+        return HttpResponseRedirect(
+            self.passthrough_next_url(reverse("account_complete_password_reset"))
+        )
+
+    def form_invalid(self, form):
+        attempts_left = self.process.record_invalid_attempt()
+        if attempts_left:
+            return super().form_invalid(form)
+        adapter = get_adapter(self.request)
+        adapter.add_message(
+            self.request,
+            messages.ERROR,
+            message=adapter.error_messages["too_many_login_attempts"],
+        )
+        return HttpResponseRedirect(self.passthrough_next_url(reverse("account_login")))
+
+
+confirm_password_reset_code = ConfirmPasswordResetCodeView.as_view()
 
 
 class LogoutView(NextRedirectMixin, LogoutFunctionalityMixin, TemplateView):

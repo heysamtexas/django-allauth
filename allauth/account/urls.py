@@ -47,11 +47,6 @@ if not allauth_app_settings.SOCIALACCOUNT_ONLY:
                 views.password_reset_done,
                 name="account_reset_password_done",
             ),
-            re_path(
-                r"^password/reset/key/(?P<uidb36>[0-9A-Za-z]+)-(?P<key>.+)/$",
-                views.password_reset_from_key,
-                name="account_reset_password_from_key",
-            ),
             path(
                 "password/reset/key/done/",
                 views.password_reset_from_key_done,
@@ -64,6 +59,29 @@ if not allauth_app_settings.SOCIALACCOUNT_ONLY:
             ),
         ]
     )
+    if app_settings.PASSWORD_RESET_BY_CODE_ENABLED:
+        urlpatterns.extend(
+            [
+                path(
+                    "password/reset/confirm/",
+                    views.confirm_password_reset_code,
+                    name="account_confirm_password_reset_code",
+                ),
+                path(
+                    "password/reset/complete/",
+                    views.complete_password_reset,
+                    name="account_complete_password_reset",
+                ),
+            ]
+        )
+    else:
+        urlpatterns.append(
+            re_path(
+                r"^password/reset/key/(?P<uidb36>[0-9A-Za-z]+)-(?P<key>.+)/$",
+                views.password_reset_from_key,
+                name="account_reset_password_from_key",
+            ),
+        )
     if getattr(settings, "MFA_PASSKEY_SIGNUP_ENABLED", False):
         urlpatterns.append(
             path(
