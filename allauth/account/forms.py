@@ -17,7 +17,7 @@ from allauth.core import context, ratelimit
 from allauth.utils import get_username_max_length, set_form_field_order
 
 from . import app_settings
-from .adapter import DefaultAccountAdapter, get_adapter
+from .adapter import get_adapter
 from .models import EmailAddress, Login
 from .utils import (
     filter_users_by_email,
@@ -25,7 +25,6 @@ from .utils import (
     sync_user_email_addresses,
     url_str_to_user_pk,
     user_email,
-    user_pk_to_url_str,
     user_username,
 )
 

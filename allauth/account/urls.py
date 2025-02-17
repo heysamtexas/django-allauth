@@ -43,16 +43,6 @@ if not allauth_app_settings.SOCIALACCOUNT_ONLY:
                 "password/reset/", views.password_reset, name="account_reset_password"
             ),
             path(
-                "password/reset/done/",
-                views.password_reset_done,
-                name="account_reset_password_done",
-            ),
-            path(
-                "password/reset/key/done/",
-                views.password_reset_from_key_done,
-                name="account_reset_password_from_key_done",
-            ),
-            path(
                 "login/code/confirm/",
                 views.confirm_login_code,
                 name="account_confirm_login_code",
@@ -72,15 +62,32 @@ if not allauth_app_settings.SOCIALACCOUNT_ONLY:
                     views.complete_password_reset,
                     name="account_complete_password_reset",
                 ),
+                path(
+                    "password/reset/done/",
+                    views.password_reset_from_key_done,
+                    name="account_password_reset_completed",
+                ),
             ]
         )
     else:
-        urlpatterns.append(
-            re_path(
-                r"^password/reset/key/(?P<uidb36>[0-9A-Za-z]+)-(?P<key>.+)/$",
-                views.password_reset_from_key,
-                name="account_reset_password_from_key",
-            ),
+        urlpatterns.extend(
+            [
+                re_path(
+                    r"^password/reset/key/(?P<uidb36>[0-9A-Za-z]+)-(?P<key>.+)/$",
+                    views.password_reset_from_key,
+                    name="account_reset_password_from_key",
+                ),
+                path(
+                    "password/reset/key/done/",
+                    views.password_reset_from_key_done,
+                    name="account_reset_password_from_key_done",
+                ),
+                path(
+                    "password/reset/done/",
+                    views.password_reset_done,
+                    name="account_reset_password_done",
+                ),
+            ]
         )
     if getattr(settings, "MFA_PASSKEY_SIGNUP_ENABLED", False):
         urlpatterns.append(

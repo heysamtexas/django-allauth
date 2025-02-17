@@ -720,7 +720,7 @@ class CompletePasswordResetView(
 ):
     template_name = "account/password_reset_from_key." + app_settings.TEMPLATE_EXTENSION
     form_class = ResetPasswordKeyForm
-    success_url = reverse_lazy("account_reset_password_from_key_done")
+    success_url = reverse_lazy("account_password_reset_completed")
 
     def dispatch(self, request, **kwargs):
         self._process = (

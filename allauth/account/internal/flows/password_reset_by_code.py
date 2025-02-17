@@ -11,7 +11,9 @@ from allauth.account.internal.flows.code_verification import (
 from allauth.account.internal.userkit import user_id_to_str
 
 
-PASSWORD_RESET_VERIFICATION_SESSION_KEY = "account_password_reset_verification"
+PASSWORD_RESET_VERIFICATION_SESSION_KEY = (
+    "account_password_reset_verification"  # nosec: B105
+)
 
 
 class PasswordResetVerificationProcess(AbstractCodeVerificationProcess):

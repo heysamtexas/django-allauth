@@ -56,13 +56,13 @@ class AbstractCodeVerificationProcess(abc.ABC):
         return time.time() - self.state["at"] <= self.timeout
 
     @abc.abstractmethod
-    def persist(self): ...
+    def persist(self): ...  # noqa: E704
 
     @abc.abstractmethod
-    def send(self): ...
+    def send(self): ...  # noqa: E704
 
     @abc.abstractmethod
-    def finish(self): ...
+    def finish(self): ...  # noqa: E704
 
     @abc.abstractmethod
-    def abort(self): ...
+    def abort(self): ...  # noqa: E704
