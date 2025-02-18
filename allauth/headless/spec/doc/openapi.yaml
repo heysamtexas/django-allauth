@@ -1873,6 +1873,8 @@ components:
           type: boolean
         login_by_code_enabled:
           type: boolean
+        password_reset_by_code_enabled:
+          type: boolean
       required:
         - authentication_method
         - email_verification_by_code_enabled
