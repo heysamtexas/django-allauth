@@ -313,6 +313,13 @@ paths:
   /_allauth/{client}/v1/auth/password/reset:
     get:
       summary: Get password reset information
+      description: |
+        Used to obtain information on and validate a password reset key.  The
+        key passed is either the key encoded in the password reset URL that the
+        user has received per email, or, the password reset code in case of
+        `ACCOUNT_PASSWORD_RESET_BY_CODE_ENABLED`. Note that in case of a code,
+        the number of requests you can make is limited (by
+        `ACCOUNT_PASSWORD_RESET_BY_CODE_MAX_ATTEMPTS`).
       tags:
         - "Authentication: Password Reset"
       parameters:
@@ -331,6 +338,13 @@ paths:
               examples:
                 password_reset_key_invalid:
                   $ref: "#/components/examples/InvalidPasswordResetKey"
+        "409":
+          description: |
+            Conflict. There is no password reset (by code) flow pending.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConflictResponse"
     post:
       summary: Reset password
       description: |
@@ -360,6 +374,13 @@ paths:
                   $ref: "#/components/examples/InvalidEmail"
         "401":
           $ref: "#/components/responses/Authentication"
+        "409":
+          description: |
+            Conflict. There is no password reset (by code) flow pending.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConflictResponse"
   ######################################################################
   # Authentication: Providers
   ######################################################################
