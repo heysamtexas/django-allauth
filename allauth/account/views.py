@@ -672,7 +672,7 @@ class PasswordResetFromKeyView(
         return _ajax_response(self.request, response, form=token_form)
 
     def get_context_data(self, **kwargs):
-        ret = super(PasswordResetFromKeyView, self).get_context_data(**kwargs)
+        ret = super().get_context_data(**kwargs)
         ret["action_url"] = reverse(
             "account_reset_password_from_key",
             kwargs={
@@ -683,7 +683,7 @@ class PasswordResetFromKeyView(
         return ret
 
     def get_form_kwargs(self):
-        kwargs = super(PasswordResetFromKeyView, self).get_form_kwargs()
+        kwargs = super().get_form_kwargs()
         kwargs["user"] = self.reset_user
         kwargs["temp_key"] = self.key
         return kwargs

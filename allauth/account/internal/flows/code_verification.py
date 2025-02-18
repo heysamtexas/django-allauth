@@ -48,6 +48,7 @@ class AbstractCodeVerificationProcess(abc.ABC):
         n += 1
         self.state["failed_attempts"] = n
         if n >= self.max_attempts:
+            self.abort()
             return False
         self.persist()
         return True
