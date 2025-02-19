@@ -198,6 +198,8 @@ class RequestPasswordResetView(APIView):
         if r429:
             return r429
         self.input.save(request)
+        if account_settings.PASSWORD_RESET_BY_CODE_ENABLED:
+            return AuthenticationResponse(request)
         return response.RequestPasswordResponse(request)
 
 

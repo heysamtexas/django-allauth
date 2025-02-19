@@ -291,6 +291,18 @@ paths:
   /_allauth/{client}/v1/auth/password/request:
     post:
       summary: Request password
+      description: |
+        Initiates the password reset procedure. Depending on whether or not
+        `ACCOUNT_PASSWORD_RESET_BY_CODE_ENABLED` is `True`, the procedure is
+        either stateless or stateful.
+
+        In case codes are used, it is stateful, and a new flow
+        `password_reset_by_code` is started. In this case, on a successful
+        password reset request, you will receive a 401 indicating the status of
+        this flow.
+
+        In case password reset is configured to use (stateless) links, you will
+        receive a 200 on a successful password reset request.
       tags:
         - "Authentication: Password Reset"
       parameters:
@@ -310,6 +322,8 @@ paths:
               examples:
                 invalid_email:
                   $ref: "#/components/examples/InvalidEmail"
+        "401":
+          $ref: "#/components/responses/Authentication"
   /_allauth/{client}/v1/auth/password/reset:
     get:
       summary: Get password reset information

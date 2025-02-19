@@ -73,6 +73,23 @@ class BaseAuthenticationResponse(APIResponse):
             if stage and stage_key == Flow.MFA_AUTHENTICATE:
                 self._enrich_mfa_flow(stage, pending_flow)
             self._upsert_pending_flow(ret, pending_flow)
+
+        if (
+            not allauth_settings.SOCIALACCOUNT_ONLY
+            and account_settings.PASSWORD_RESET_BY_CODE_ENABLED
+        ):
+            from allauth.account.internal.flows import password_reset_by_code
+
+            ret.append(
+                {
+                    "id": Flow.PASSWORD_RESET_BY_CODE,
+                    "is_pending": bool(
+                        password_reset_by_code.PasswordResetVerificationProcess.resume(
+                            request
+                        )
+                    ),
+                }
+            )
         return ret
 
     def _upsert_pending_flow(self, flows, pending_flow):
