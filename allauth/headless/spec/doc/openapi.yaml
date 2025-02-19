@@ -296,10 +296,10 @@ paths:
         `ACCOUNT_PASSWORD_RESET_BY_CODE_ENABLED` is `True`, the procedure is
         either stateless or stateful.
 
-        In case codes are used, it is stateful, and a new flow
-        `password_reset_by_code` is started. In this case, on a successful
-        password reset request, you will receive a 401 indicating the status of
-        this flow.
+        In case codes are used, it is stateful, and a new
+        `password_reset_by_code` flow is started. In this case, on a successful
+        password reset request, you will receive a 401 indicating the pending
+        status of this flow.
 
         In case password reset is configured to use (stateless) links, you will
         receive a 200 on a successful password reset request.
