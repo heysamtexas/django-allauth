@@ -3,6 +3,7 @@ from http import HTTPStatus
 import pytest
 
 from allauth.account import app_settings
+from allauth.account.models import EmailAddress
 
 
 @pytest.fixture(autouse=True)
@@ -138,3 +139,57 @@ def test_password_reset_flow(
         content_type="application/json",
     )
     assert resp.status_code == HTTPStatus.CONFLICT
+
+
+def test_indirect_email_verification_on_get(
+    db, client, mailoutbox, get_last_password_reset_code, user_factory, headless_reverse
+):
+    user = user_factory(email_verified=False)
+    address = EmailAddress.objects.get(user=user, email=user.email, verified=False)
+    resp = client.post(
+        headless_reverse("headless:account:request_password_reset"),
+        data={
+            "email": address.email,
+        },
+        content_type="application/json",
+    )
+    assert resp.status_code == HTTPStatus.UNAUTHORIZED
+    resp = client.get(
+        headless_reverse("headless:account:reset_password"),
+        HTTP_X_PASSWORD_RESET_KEY=get_last_password_reset_code(client, mailoutbox),
+    )
+    assert resp.status_code == HTTPStatus.OK
+    address.refresh_from_db()
+    assert address.verified
+
+
+def test_indirect_email_verification_on_post(
+    db,
+    client,
+    mailoutbox,
+    get_last_password_reset_code,
+    user_factory,
+    headless_reverse,
+    password_factory,
+):
+    user = user_factory(email_verified=False)
+    address = EmailAddress.objects.get(user=user, email=user.email, verified=False)
+    resp = client.post(
+        headless_reverse("headless:account:request_password_reset"),
+        data={
+            "email": address.email,
+        },
+        content_type="application/json",
+    )
+    assert resp.status_code == HTTPStatus.UNAUTHORIZED
+    resp = client.post(
+        headless_reverse("headless:account:reset_password"),
+        {
+            "key": get_last_password_reset_code(client, mailoutbox),
+            "password": password_factory(),
+        },
+        content_type="application/json",
+    )
+    assert resp.status_code == HTTPStatus.UNAUTHORIZED
+    address.refresh_from_db()
+    assert address.verified

@@ -231,6 +231,7 @@ class ResetPasswordView(APIView):
             if not input.is_valid():
                 self.process.record_invalid_attempt()
                 return ErrorResponse(request, input=input)
+            self.process.confirm_code()
             return response.PasswordResetKeyResponse(request, self.process.user)
         else:
             input = ResetPasswordKeyInput({"key": key})
@@ -248,6 +249,7 @@ class ResetPasswordView(APIView):
         user = self.input.user
         flows.password_reset.reset_password(user, self.input.cleaned_data["password"])
         if self.process:
+            self.process.confirm_code()
             self.process.finish()
         else:
             password_reset.finalize_password_reset(request, user)

@@ -753,7 +753,7 @@ class CompletePasswordResetView(
 
     def form_valid(self, form):
         form.save()
-        flows.password_reset.finalize_password_reset(self.request, self._process.user)
+        self._process.finish()
         if app_settings.LOGIN_ON_PASSWORD_RESET:
             return perform_login(
                 self.request,
@@ -772,14 +772,14 @@ class ConfirmPasswordResetCodeView(NextRedirectMixin, FormView):
     form_class = ConfirmPasswordResetCodeForm
 
     def dispatch(self, request, *args, **kwargs):
-        self.process = (
+        self._process = (
             flows.password_reset_by_code.PasswordResetVerificationProcess.resume(
                 request
             )
         )
-        if not self.process:
+        if not self._process:
             return HttpResponseRedirect(reverse("account_login"))
-        if self.process.state.get("code_confirmed"):
+        if self._process.state.get("code_confirmed"):
             return HttpResponseRedirect(reverse("account_complete_password_reset"))
         return super().dispatch(request, *args, **kwargs)
 
@@ -790,23 +790,22 @@ class ConfirmPasswordResetCodeView(NextRedirectMixin, FormView):
 
     def get_form_kwargs(self):
         ret = super().get_form_kwargs()
-        ret["code"] = self.process.code
+        ret["code"] = self._process.code
         return ret
 
     def get_context_data(self, **kwargs):
         ret = super().get_context_data(**kwargs)
-        ret["email"] = self.process.state["email"]
+        ret["email"] = self._process.state["email"]
         return ret
 
     def form_valid(self, form):
-        self.process.state["code_confirmed"] = True
-        self.process.persist()
+        self._process.confirm_code()
         return HttpResponseRedirect(
             self.passthrough_next_url(reverse("account_complete_password_reset"))
         )
 
     def form_invalid(self, form):
-        attempts_left = self.process.record_invalid_attempt()
+        attempts_left = self._process.record_invalid_attempt()
         if attempts_left:
             return super().form_invalid(form)
         adapter = get_adapter(self.request)

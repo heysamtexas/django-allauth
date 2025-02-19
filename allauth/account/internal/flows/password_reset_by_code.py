@@ -8,6 +8,9 @@ from allauth.account.internal.flows import password_reset
 from allauth.account.internal.flows.code_verification import (
     AbstractCodeVerificationProcess,
 )
+from allauth.account.internal.flows.email_verification import (
+    verify_email_indirectly,
+)
 from allauth.account.internal.flows.signup import send_unknown_account_mail
 
 
@@ -28,6 +31,13 @@ class PasswordResetVerificationProcess(AbstractCodeVerificationProcess):
 
     def abort(self):
         self.request.session.pop(PASSWORD_RESET_VERIFICATION_SESSION_KEY, None)
+
+    def confirm_code(self):
+        if self.state.get("code_confirmed"):
+            return
+        self.state["code_confirmed"] = True
+        self.persist()
+        verify_email_indirectly(self.request, self.user, self.state["email"])
 
     def finish(self):
         self.request.session.pop(PASSWORD_RESET_VERIFICATION_SESSION_KEY, None)
