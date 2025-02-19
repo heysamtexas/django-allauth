@@ -19,7 +19,7 @@ def test_validating_codes_by_get_is_limited(client, user, headless_reverse):
         },
         content_type="application/json",
     )
-    assert resp.status_code == HTTPStatus.OK
+    assert resp.status_code == HTTPStatus.UNAUTHORIZED
     for i in range(app_settings.PASSWORD_RESET_BY_CODE_MAX_ATTEMPTS + 1):
         resp = client.get(
             headless_reverse("headless:account:reset_password"),
@@ -42,7 +42,7 @@ def test_validating_codes_by_get_limitation_carriers_over_to_post(
         },
         content_type="application/json",
     )
-    assert resp.status_code == HTTPStatus.OK
+    assert resp.status_code == HTTPStatus.UNAUTHORIZED
     for i in range(app_settings.PASSWORD_RESET_BY_CODE_MAX_ATTEMPTS):
         resp = client.get(
             headless_reverse("headless:account:reset_password"),
@@ -78,7 +78,7 @@ def test_password_reset_flow(
         },
         content_type="application/json",
     )
-    assert resp.status_code == HTTPStatus.OK
+    assert resp.status_code == HTTPStatus.UNAUTHORIZED
     code = get_last_password_reset_code(client, mailoutbox)
     password = password_factory()
 
@@ -106,6 +106,7 @@ def test_password_reset_flow(
             {
                 "code": "password_too_short",
                 "message": "This password is too short. It must contain at least 6 characters.",
+                "param": "password",
             }
         ],
     }

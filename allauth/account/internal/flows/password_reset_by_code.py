@@ -8,7 +8,7 @@ from allauth.account.internal.flows import password_reset
 from allauth.account.internal.flows.code_verification import (
     AbstractCodeVerificationProcess,
 )
-from allauth.account.internal.userkit import user_id_to_str
+from allauth.account.internal.flows.signup import send_unknown_account_mail
 
 
 PASSWORD_RESET_VERIFICATION_SESSION_KEY = (
@@ -44,15 +44,17 @@ class PasswordResetVerificationProcess(AbstractCodeVerificationProcess):
 
     def send(self):
         adapter = get_adapter()
+        email = self.state["email"]
+        if not self.user:
+            send_unknown_account_mail(self.request, email)
+            return
         code = adapter.generate_password_reset_code()
-        self.state.update({"code": code, "user_id": user_id_to_str(self.user)})
+        self.state.update({"code": code})
         context = {
             "request": self.request,
             "code": self.code,
         }
-        adapter.send_mail(
-            "account/email/password_reset_code", self.state["email"], context
-        )
+        adapter.send_mail("account/email/password_reset_code", email, context)
 
     @classmethod
     def initiate(cls, *, request, user, email: str):

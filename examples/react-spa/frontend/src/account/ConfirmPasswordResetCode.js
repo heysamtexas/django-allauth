@@ -37,7 +37,7 @@ export default function ConfirmPasswordResetCode () {
       <FormErrors errors={response.content?.errors} />
 
       <div><label>Code <input value={code} onChange={(e) => setCode(e.target.value)} type='code' required /></label>
-        <FormErrors param='code' errors={response.content?.errors} />
+        <FormErrors param='key' errors={response.content?.errors} />
       </div>
       <Button disabled={response.fetching} onClick={() => submit()}>Confirm</Button>
     </div>

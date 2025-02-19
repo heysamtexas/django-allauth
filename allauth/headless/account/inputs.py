@@ -1,4 +1,4 @@
-from django.core.exceptions import ImproperlyConfigured
+from django.core.exceptions import ImproperlyConfigured, ValidationError
 from django.core.validators import validate_email
 
 from allauth.account import app_settings as account_settings
@@ -130,7 +130,7 @@ class ResetPasswordKeyInput(inputs.Input):
     def _clean_key_code(self):
         key = self.cleaned_data["key"]
         if not compare_code(actual=key, expected=self.code):
-            raise get_account_adapter().validation_error("invalid_password_reset")
+            raise get_account_adapter().validation_error("incorrect_code")
         return key
 
     def _clean_key_link(self):
@@ -150,7 +150,10 @@ class ResetPasswordInput(ResetPasswordKeyInput):
         cleaned_data = super().clean()
         password = self.cleaned_data.get("password")
         if self.user and password is not None:
-            get_account_adapter().clean_password(password, user=self.user)
+            try:
+                get_account_adapter().clean_password(password, user=self.user)
+            except ValidationError as e:
+                self.add_error("password", e)
         return cleaned_data
 
 

@@ -31,9 +31,7 @@ from .utils import (
 
 class EmailAwarePasswordResetTokenGenerator(PasswordResetTokenGenerator):
     def _make_hash_value(self, user, timestamp):
-        ret = super(EmailAwarePasswordResetTokenGenerator, self)._make_hash_value(
-            user, timestamp
-        )
+        ret = super()._make_hash_value(user, timestamp)
         sync_user_email_addresses(user)
         email = user_email(user)
         emails = set([email] if email else [])
@@ -49,7 +47,7 @@ default_token_generator = app_settings.PASSWORD_RESET_TOKEN_GENERATOR()
 
 class PasswordVerificationMixin:
     def clean(self):
-        cleaned_data = super(PasswordVerificationMixin, self).clean()
+        cleaned_data = super().clean()
         password1 = cleaned_data.get("password1")
         password2 = cleaned_data.get("password2")
         if (password1 and password2) and password1 != password2:
@@ -591,13 +589,11 @@ class ResetPasswordForm(forms.Form):
 
     def save(self, request, **kwargs) -> str:
         email = self.cleaned_data["email"]
-        if not self.users:
-            flows.signup.send_unknown_account_mail(request, email)
-            return email
-
         if app_settings.PASSWORD_RESET_BY_CODE_ENABLED:
             flows.password_reset_by_code.PasswordResetVerificationProcess.initiate(
-                request=request, user=self.users[0], email=email
+                request=request,
+                user=(self.users[0] if self.users else None),
+                email=email,
             )
         else:
             token_generator = kwargs.get("token_generator", default_token_generator)

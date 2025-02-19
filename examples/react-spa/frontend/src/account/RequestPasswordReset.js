@@ -3,12 +3,8 @@ import FormErrors from '../components/FormErrors'
 import { requestPasswordReset, Flows } from '../lib/allauth'
 import { Navigate, Link } from 'react-router-dom'
 import Button from '../components/Button'
-import { useConfig } from '../auth/hooks'
-import { useAuthStatus } from '../auth'
 
 export default function RequestPasswordReset () {
-  const [, authInfo] = useAuthStatus()
-  const config = useConfig()
   const [email, setEmail] = useState('')
   const [response, setResponse] = useState({ fetching: false, content: null })
 
@@ -24,7 +20,7 @@ export default function RequestPasswordReset () {
     })
   }
 
-  if (authInfo.pendingFlow?.id === Flows.PASSWORD_RESET_BY_CODE) {
+  if (response.content?.status === 401) {
     return <Navigate to='/account/password/reset/confirm' />
   }
   if (response.content?.status === 200) {

@@ -8,6 +8,7 @@ from django.urls import reverse
 from allauth.account import app_settings, signals
 from allauth.account.adapter import get_adapter
 from allauth.account.app_settings import LoginMethod
+from allauth.account.internal.flows.signup import send_unknown_account_mail
 from allauth.account.models import EmailAddress
 from allauth.core.internal.httpkit import get_frontend_url
 from allauth.utils import build_absolute_uri
@@ -66,6 +67,9 @@ def get_reset_password_from_key_url(request: HttpRequest, key: str) -> str:
 def request_password_reset(request, email, users, token_generator):
     from allauth.account.utils import user_pk_to_url_str, user_username
 
+    if not users:
+        send_unknown_account_mail(request, email)
+        return
     adapter = get_adapter()
     for user in users:
         temp_key = (
