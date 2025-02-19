@@ -771,6 +771,7 @@ class ConfirmPasswordResetCodeView(NextRedirectMixin, FormView):
     )
     form_class = ConfirmPasswordResetCodeForm
 
+    @method_decorator(login_not_required)
     def dispatch(self, request, *args, **kwargs):
         self._process = (
             flows.password_reset_by_code.PasswordResetVerificationProcess.resume(
