@@ -388,12 +388,14 @@ def settings_impacting_urls(settings):
     @contextmanager
     def f(**kv):
         def reload_urlconf():
-            urlconf = settings.ROOT_URLCONF
-            if urlconf in sys.modules:
-                clear_url_caches()
-                importlib.reload(sys.modules[urlconf])
-                importlib.reload(sys.modules["allauth.account.urls"])
-                importlib.reload(sys.modules["allauth.urls"])
+            clear_url_caches()
+            for urlconf in [
+                settings.ROOT_URLCONF,
+                "allauth.account.urls",
+                "allauth.urls",
+            ]:
+                if urlconf in sys.modules:
+                    importlib.reload(sys.modules[urlconf])
             set_urlconf(None)
 
         old_values = {}
