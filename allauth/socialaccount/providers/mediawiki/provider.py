@@ -1,5 +1,4 @@
-from collections.abc import Mapping
-from typing import Any, Optional
+from typing import Any, Dict, List, Mapping, Optional
 
 from django.conf import settings
 
@@ -40,7 +39,7 @@ class MediaWikiProvider(OAuth2Provider):
     def extract_uid(self, data):
         return str(data["sub"])
 
-    def extract_extra_data(self, data: Mapping[str, Any]) -> dict[str, Any]:
+    def extract_extra_data(self, data: Mapping[str, Any]) -> Dict[str, Any]:
         return dict(
             email=self._get_email(data),
             realname=data.get("realname"),
@@ -54,7 +53,7 @@ class MediaWikiProvider(OAuth2Provider):
             name=data.get("realname"),
         )
 
-    def extract_email_addresses(self, data: Mapping[str, Any]) -> list[EmailAddress]:
+    def extract_email_addresses(self, data: Mapping[str, Any]) -> List[EmailAddress]:
         # A MediaWiki account may not have email address.
         if addr := self._get_email(data):
             return [EmailAddress(email=addr, verified=True, primary=True)]
