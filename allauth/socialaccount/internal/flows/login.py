@@ -1,7 +1,7 @@
 from django.http import HttpResponseRedirect
 from django.shortcuts import render
 
-from allauth.account import app_settings as account_settings, authentication
+from allauth.account import app_settings as account_settings
 from allauth.account.adapter import get_adapter as get_account_adapter
 from allauth.account.utils import perform_login
 from allauth.core.exceptions import (
@@ -20,7 +20,7 @@ from allauth.socialaccount.providers.base import AuthProcess
 
 
 def _login(request, sociallogin):
-    sociallogin._accept_login()
+    sociallogin._accept_login(request)
     record_authentication(request, sociallogin)
     return perform_login(
         request,
@@ -33,7 +33,7 @@ def _login(request, sociallogin):
 
 def pre_social_login(request, sociallogin):
     clear_pending_signup(request)
-    assert not sociallogin.is_existing
+    assert not sociallogin.is_existing  # nosec
     sociallogin.lookup()
     get_adapter().pre_social_login(request, sociallogin)
     signals.pre_social_login.send(
@@ -85,7 +85,9 @@ def _authenticate(request, sociallogin):
 
 
 def record_authentication(request, sociallogin):
-    authentication.record_authentication(
+    from allauth.account.internal.flows.login import record_authentication
+
+    record_authentication(
         request,
         "socialaccount",
         **{

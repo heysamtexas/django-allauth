@@ -1,7 +1,5 @@
-import binascii
 import hmac
-import os
-import struct
+import secrets
 from hashlib import sha1
 from typing import List, Optional
 
@@ -34,7 +32,7 @@ class RecoveryCodes:
 
     @classmethod
     def generate_seed(self) -> str:
-        key = binascii.hexlify(os.urandom(20)).decode("ascii")
+        key = secrets.token_hex(40)
         return key
 
     def _get_migrated_codes(self) -> Optional[List[str]]:
@@ -51,11 +49,14 @@ class RecoveryCodes:
         ret = []
         seed = decrypt(self.instance.data["seed"])
         h = hmac.new(key=seed.encode("ascii"), msg=None, digestmod=sha1)
+        byte_count = min(app_settings.RECOVERY_CODE_DIGITS // 2, h.digest_size)
         for i in range(app_settings.RECOVERY_CODE_COUNT):
             h.update((f"{i:3},").encode("utf-8"))
-            value = struct.unpack(">I", h.digest()[:4])[0]
-            value %= 10**8
-            fmt_value = f"{value:08}"
+            value = int.from_bytes(
+                h.digest()[:byte_count], byteorder="big", signed=False
+            )
+            value %= 10**app_settings.RECOVERY_CODE_DIGITS
+            fmt_value = str(value).zfill(app_settings.RECOVERY_CODE_DIGITS)
             ret.append(fmt_value)
         return ret
 
@@ -91,7 +92,7 @@ class RecoveryCodes:
             return False
         else:
             migrated_codes = self.instance.data["migrated_codes"]
-            assert isinstance(migrated_codes, list)
+            assert isinstance(migrated_codes, list)  # nosec
             migrated_codes.pop(idx)
             self.instance.data["migrated_codes"] = migrated_codes
             self.instance.save()

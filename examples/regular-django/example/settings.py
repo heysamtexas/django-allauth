@@ -156,8 +156,8 @@ TEMPLATES = [
 ]
 
 MIDDLEWARE = (
-    "django.middleware.common.CommonMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.middleware.locale.LocaleMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
@@ -211,10 +211,11 @@ INSTALLED_APPS = (
     "allauth.socialaccount.providers.weibo",
     "allauth.socialaccount.providers.xing",
     "allauth.usersessions",
-    "example.demo",
+    "example.users",
 )
 
 
+AUTH_USER_MODEL = "users.User"
 AUTH_PASSWORD_VALIDATORS = [
     {
         "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
@@ -227,6 +228,15 @@ AUTH_PASSWORD_VALIDATORS = [
 ALLOWED_HOSTS = ["127.0.0.1", "localhost"]
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 ACCOUNT_LOGIN_BY_CODE_ENABLED = True
+ACCOUNT_EMAIL_VERIFICATION = "mandatory"
+ACCOUNT_EMAIL_VERIFICATION_BY_CODE_ENABLED = True
+ACCOUNT_LOGIN_METHODS = {
+    "email",
+}
+ACCOUNT_PASSWORD_RESET_BY_CODE_ENABLED = True
+ACCOUNT_SIGNUP_FIELDS = ["email*", "password1*", "password2*"]
+ACCOUNT_ADAPTER = "example.users.allauth.AccountAdapter"
+
 
 MFA_SUPPORTED_TYPES = [
     "webauthn",
@@ -234,6 +244,7 @@ MFA_SUPPORTED_TYPES = [
     "recovery_codes",
 ]
 MFA_PASSKEY_LOGIN_ENABLED = True
+MFA_PASSKEY_SIGNUP_ENABLED = True
 
 try:
     from .local_settings import *  # noqa

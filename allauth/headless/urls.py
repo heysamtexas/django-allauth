@@ -1,6 +1,7 @@
 from django.urls import include, path
 
 from allauth import app_settings as allauth_settings
+from allauth.headless import app_settings
 from allauth.headless.account import urls as account_urls
 from allauth.headless.base import urls as base_urls
 from allauth.headless.constants import Client
@@ -61,16 +62,31 @@ def build_urlpatterns(client):
 
 
 app_name = "headless"
-urlpatterns = [
-    path(
-        "browser/",
-        include(
-            (build_urlpatterns(Client.BROWSER), "headless"),
-            namespace="browser",
-        ),
-    ),
-    path(
-        "app/",
-        include((build_urlpatterns(Client.APP), "headless"), namespace="app"),
-    ),
-]
+urlpatterns = []
+if Client.BROWSER in app_settings.CLIENTS:
+    urlpatterns.append(
+        path(
+            "browser/",
+            include(
+                (build_urlpatterns(Client.BROWSER), "headless"),
+                namespace="browser",
+            ),
+        )
+    )
+if Client.APP in app_settings.CLIENTS:
+    urlpatterns.append(
+        path(
+            "app/",
+            include((build_urlpatterns(Client.APP), "headless"), namespace="app"),
+        )
+    )
+
+if app_settings.SERVE_SPECIFICATION:
+    urlpatterns.append(
+        path(
+            "",
+            include(
+                "allauth.headless.spec.urls",
+            ),
+        )
+    )

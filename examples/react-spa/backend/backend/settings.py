@@ -33,6 +33,9 @@ INSTALLED_APPS = [
     "allauth.mfa",
     "allauth.headless",
     "allauth.usersessions",
+    "drf_spectacular",
+    "backend.drf_demo",
+    "backend.ninja_demo",
 ]
 
 MIDDLEWARE = [
@@ -125,11 +128,11 @@ EMAIL_PORT = 1025
 AUTHENTICATION_BACKENDS = ("allauth.account.auth_backends.AuthenticationBackend",)
 
 ACCOUNT_EMAIL_VERIFICATION = "mandatory"
-ACCOUNT_AUTHENTICATION_METHOD = "email"
-ACCOUNT_USERNAME_REQUIRED = False
-ACCOUNT_EMAIL_REQUIRED = True
+ACCOUNT_LOGIN_METHODS = {"email"}
 ACCOUNT_LOGOUT_ON_PASSWORD_CHANGE = False
 ACCOUNT_LOGIN_BY_CODE_ENABLED = True
+ACCOUNT_EMAIL_VERIFICATION_BY_CODE_ENABLED = True
+ACCOUNT_SIGNUP_FIELDS = ["email*", "password1*", "password2*"]
 
 HEADLESS_ONLY = True
 HEADLESS_FRONTEND_URLS = {
@@ -139,9 +142,19 @@ HEADLESS_FRONTEND_URLS = {
     "account_signup": "/account/signup",
     "socialaccount_login_error": "/account/provider/callback",
 }
+HEADLESS_SERVE_SPECIFICATION = True
 
 MFA_SUPPORTED_TYPES = ["totp", "recovery_codes", "webauthn"]
 MFA_PASSKEY_LOGIN_ENABLED = True
+MFA_PASSKEY_SIGNUP_ENABLED = True
+
+REST_FRAMEWORK = {
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+}
+SPECTACULAR_SETTINGS = {
+    "EXTERNAL_DOCS": {"description": "allauth", "url": "/_allauth/openapi.html"},
+}
+
 
 try:
     from .local_settings import *  # noqa

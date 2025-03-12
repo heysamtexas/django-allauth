@@ -2,6 +2,9 @@ from unittest.mock import ANY
 
 import pytest
 
+from allauth.account.signals import user_logged_in
+from allauth.headless.base.response import AuthenticationResponse
+
 
 def test_auth_password_input_error(headless_reverse, client):
     resp = client.post(
@@ -16,19 +19,19 @@ def test_auth_password_input_error(headless_reverse, client):
             {
                 "message": "This field is required.",
                 "code": "required",
-                "param": "password",
+                "param": "username",
             },
             {
                 "message": "This field is required.",
                 "code": "required",
-                "param": "username",
+                "param": "password",
             },
         ],
     }
 
 
 def test_auth_password_bad_password(headless_reverse, client, user, settings):
-    settings.ACCOUNT_AUTHENTICATION_METHOD = "email"
+    settings.ACCOUNT_LOGIN_METHODS = {"email"}
     resp = client.post(
         headless_reverse("headless:account:login"),
         data={
@@ -53,7 +56,7 @@ def test_auth_password_bad_password(headless_reverse, client, user, settings):
 def test_auth_password_success(
     client, user, user_password, settings, headless_reverse, headless_client
 ):
-    settings.ACCOUNT_AUTHENTICATION_METHOD = "email"
+    settings.ACCOUNT_LOGIN_METHODS = {"email"}
     login_resp = client.post(
         headless_reverse("headless:account:login"),
         data={
@@ -122,7 +125,7 @@ def test_login_failed_rate_limit(
     enable_cache,
 ):
     settings.ACCOUNT_RATE_LIMITS = {"login_failed": "1/m/ip"}
-    settings.ACCOUNT_AUTHENTICATION_METHOD = "email"
+    settings.ACCOUNT_LOGIN_METHODS = {"email"}
     for attempt in range(2):
         resp = client.post(
             headless_reverse("headless:account:login"),
@@ -159,7 +162,7 @@ def test_login_rate_limit(
     enable_cache,
 ):
     settings.ACCOUNT_RATE_LIMITS = {"login": "1/m/ip"}
-    settings.ACCOUNT_AUTHENTICATION_METHOD = "email"
+    settings.ACCOUNT_LOGIN_METHODS = {"email"}
     for attempt in range(2):
         resp = client.post(
             headless_reverse("headless:account:login"),
@@ -176,7 +179,7 @@ def test_login_rate_limit(
 def test_login_already_logged_in(
     auth_client, user, user_password, settings, headless_reverse
 ):
-    settings.ACCOUNT_AUTHENTICATION_METHOD = "email"
+    settings.ACCOUNT_LOGIN_METHODS = {"email"}
     resp = auth_client.post(
         headless_reverse("headless:account:login"),
         data={
@@ -186,3 +189,27 @@ def test_login_already_logged_in(
         content_type="application/json",
     )
     assert resp.status_code == 409
+
+
+def test_custom_post_login_response(
+    settings, client, headless_reverse, user, user_password
+):
+    settings.ACCOUNT_LOGIN_METHODS = {"email"}
+
+    def on_user_logged_in(**kwargs):
+        response = kwargs["response"]
+        assert isinstance(response, AuthenticationResponse)
+
+    user_logged_in.connect(on_user_logged_in)
+    try:
+        login_resp = client.post(
+            headless_reverse("headless:account:login"),
+            data={
+                "email": user.email,
+                "password": user_password,
+            },
+            content_type="application/json",
+        )
+        assert login_resp.status_code == 200
+    finally:
+        user_logged_in.disconnect(on_user_logged_in)

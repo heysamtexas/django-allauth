@@ -1,7 +1,9 @@
+from django.http import Http404
 from django.urls import reverse
 
+from allauth.account.internal.decorators import login_not_required
 from allauth.socialaccount.adapter import get_adapter
-from allauth.socialaccount.models import SocialToken
+from allauth.socialaccount.models import SocialApp, SocialToken
 from allauth.socialaccount.providers.oauth2.views import (
     OAuth2Adapter,
     OAuth2CallbackView,
@@ -28,7 +30,7 @@ class OpenIDConnectOAuth2Adapter(OAuth2Adapter):
     def basic_auth(self):
         token_auth_method = self.get_provider().app.settings.get("token_auth_method")
         if token_auth_method:
-            return token_auth_method == "client_secret_basic"
+            return token_auth_method == "client_secret_basic"  # nosec
         return "client_secret_basic" in self.openid_config.get(
             "token_endpoint_auth_methods_supported", []
         )
@@ -63,15 +65,23 @@ class OpenIDConnectOAuth2Adapter(OAuth2Adapter):
         return build_absolute_uri(request, callback_url, protocol)
 
 
+@login_not_required
 def login(request, provider_id):
-    view = OAuth2LoginView.adapter_view(
-        OpenIDConnectOAuth2Adapter(request, provider_id)
-    )
-    return view(request)
+    try:
+        view = OAuth2LoginView.adapter_view(
+            OpenIDConnectOAuth2Adapter(request, provider_id)
+        )
+        return view(request)
+    except SocialApp.DoesNotExist:
+        raise Http404
 
 
+@login_not_required
 def callback(request, provider_id):
-    view = OAuth2CallbackView.adapter_view(
-        OpenIDConnectOAuth2Adapter(request, provider_id)
-    )
-    return view(request)
+    try:
+        view = OAuth2CallbackView.adapter_view(
+            OpenIDConnectOAuth2Adapter(request, provider_id)
+        )
+        return view(request)
+    except SocialApp.DoesNotExist:
+        raise Http404

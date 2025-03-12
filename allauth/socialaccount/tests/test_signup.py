@@ -12,7 +12,7 @@ from allauth.account.models import EmailAddress
 from allauth.account.utils import user_email, user_username
 from allauth.core import context
 from allauth.socialaccount.helpers import complete_social_login
-from allauth.socialaccount.models import SocialAccount, SocialLogin
+from allauth.socialaccount.models import SocialAccount
 from allauth.socialaccount.views import signup
 
 
@@ -22,18 +22,21 @@ def setup_sociallogin_flow(request_factory):
         request = request_factory.get("/")
         request.user = AnonymousUser()
 
-        resp = complete_social_login(request, sociallogin)
-        session = client.session
-        for k, v in request.session.items():
-            session[k] = v
-        session.save()
-        return resp
+        with context.request_context(request):
+            resp = complete_social_login(request, sociallogin)
+            session = client.session
+            for k, v in request.session.items():
+                session[k] = v
+            session.save()
+            return resp
 
     return f
 
 
 @pytest.fixture
-def email_address_clash(request_factory):
+def email_address_clash(
+    request_factory, sociallogin_factory, twitter_provider_settings
+):
     def _email_address_clash(username, email):
         User = get_user_model()
         # Some existig user
@@ -47,12 +50,8 @@ def email_address_clash(request_factory):
         )
 
         # A social user being signed up...
-        account = SocialAccount(provider="twitter", uid="123")
-        user = User()
-        user_username(user, username)
-        user_email(user, email)
-        sociallogin = SocialLogin(
-            user=user, account=account, email_addresses=[EmailAddress(email=email)]
+        sociallogin = sociallogin_factory(
+            provider="twitter", username=username, email=email
         )
 
         # Signing up, should pop up the social signup form
@@ -91,7 +90,7 @@ def test_email_address_clash_username_required(
     settings.ACCOUNT_EMAIL_REQUIRED = True
     settings.ACCOUNT_UNIQUE_EMAIL = True
     settings.ACCOUNT_USERNAME_REQUIRED = True
-    settings.ACCOUNT_AUTHENTICATION_METHOD = "email"
+    settings.ACCOUNT_LOGIN_METHODS = {"email"}
     settings.SOCIALACCOUNT_AUTO_SIGNUP = True
     request, resp = email_address_clash("test", "test@example.com")
     assert resp["location"] == reverse("socialaccount_signup")
@@ -113,7 +112,7 @@ def test_email_address_clash_username_not_required(db, settings, email_address_c
     settings.ACCOUNT_EMAIL_REQUIRED = True
     settings.ACCOUNT_UNIQUE_EMAIL = True
     settings.ACCOUNT_USERNAME_REQUIRED = False
-    settings.ACCOUNT_AUTHENTICATION_METHOD = "email"
+    settings.ACCOUNT_LOGIN_METHODS = {"email"}
     settings.SOCIALACCOUNT_AUTO_SIGNUP = True
     request, resp = email_address_clash("test", "test@example.com")
     assert resp["location"] == reverse("socialaccount_signup")
@@ -134,7 +133,7 @@ def test_email_address_clash_username_auto_signup(db, settings, email_address_cl
     settings.ACCOUNT_EMAIL_REQUIRED = True
     settings.ACCOUNT_UNIQUE_EMAIL = True
     settings.ACCOUNT_USERNAME_REQUIRED = False
-    settings.ACCOUNT_AUTHENTICATION_METHOD = "email"
+    settings.ACCOUNT_LOGIN_METHODS = {"email"}
     settings.SOCIALACCOUNT_AUTO_SIGNUP = True
     # Clash on username, but auto signup still works
     request, resp = email_address_clash("test", "other@example.com")
@@ -145,27 +144,20 @@ def test_email_address_clash_username_auto_signup(db, settings, email_address_cl
     assert user_username(user) != "test"
 
 
-def test_populate_username_in_blacklist(db, settings, request_factory):
+def test_populate_username_in_blacklist(
+    db, settings, request_factory, sociallogin_factory, twitter_provider_settings
+):
     settings.ACCOUNT_EMAIL_REQUIRED = True
     settings.ACCOUNT_USERNAME_BLACKLIST = ["username", "username1", "username2"]
     settings.ACCOUNT_UNIQUE_EMAIL = True
     settings.ACCOUNT_USERNAME_REQUIRED = True
-    settings.ACCOUNT_AUTHENTICATION_METHOD = "email"
+    settings.ACCOUNT_LOGIN_METHODS = {"email"}
     settings.SOCIALACCOUNT_AUTO_SIGNUP = True
     request = request_factory.get("/accounts/twitter/login/callback/")
     request.user = AnonymousUser()
-
-    User = get_user_model()
-    user = User()
-    setattr(user, account_settings.USER_MODEL_USERNAME_FIELD, "username")
-    setattr(
-        user,
-        account_settings.USER_MODEL_EMAIL_FIELD,
-        "username@example.com",
+    sociallogin = sociallogin_factory(
+        provider="twitter", username="username", email="username@example.com"
     )
-
-    account = SocialAccount(provider="twitter", uid="123")
-    sociallogin = SocialLogin(user=user, account=account)
     with context.request_context(request):
         complete_social_login(request, sociallogin)
 
@@ -184,7 +176,7 @@ def test_verified_email_change_at_signup(
     settings.ACCOUNT_EMAIL_VERIFICATION = "mandatory"
     settings.ACCOUNT_UNIQUE_EMAIL = True
     settings.ACCOUNT_USERNAME_REQUIRED = False
-    settings.ACCOUNT_AUTHENTICATION_METHOD = "email"
+    settings.ACCOUNT_LOGIN_METHODS = {"email"}
     settings.SOCIALACCOUNT_AUTO_SIGNUP = False
 
     sociallogin = sociallogin_factory(email="verified@example.com")
@@ -226,7 +218,7 @@ def test_unverified_email_change_at_signup(
     settings.ACCOUNT_EMAIL_VERIFICATION = "mandatory"
     settings.ACCOUNT_UNIQUE_EMAIL = True
     settings.ACCOUNT_USERNAME_REQUIRED = False
-    settings.ACCOUNT_AUTHENTICATION_METHOD = "email"
+    settings.ACCOUNT_LOGIN_METHODS = {"email"}
     settings.SOCIALACCOUNT_AUTO_SIGNUP = False
 
     User = get_user_model()
@@ -267,7 +259,7 @@ def test_unique_email_validation_signup(
     settings.ACCOUNT_EMAIL_VERIFICATION = "mandatory"
     settings.ACCOUNT_UNIQUE_EMAIL = True
     settings.ACCOUNT_USERNAME_REQUIRED = False
-    settings.ACCOUNT_AUTHENTICATION_METHOD = "email"
+    settings.ACCOUNT_LOGIN_METHODS = {"email"}
     settings.SOCIALACCOUNT_AUTO_SIGNUP = False
     User = get_user_model()
     email = "me@example.com"
@@ -303,7 +295,7 @@ def test_social_account_taken_at_signup(
     settings.ACCOUNT_EMAIL_VERIFICATION = "mandatory"
     settings.ACCOUNT_UNIQUE_EMAIL = True
     settings.ACCOUNT_USERNAME_REQUIRED = True
-    settings.ACCOUNT_AUTHENTICATION_METHOD = "email"
+    settings.ACCOUNT_LOGIN_METHODS = {"email"}
     settings.SOCIALACCOUNT_AUTO_SIGNUP = False
 
     User = get_user_model()
@@ -333,7 +325,7 @@ def test_email_address_required_missing_from_sociallogin(
     settings.ACCOUNT_EMAIL_REQUIRED = True
     settings.ACCOUNT_UNIQUE_EMAIL = True
     settings.ACCOUNT_USERNAME_REQUIRED = False
-    settings.ACCOUNT_AUTHENTICATION_METHOD = "email"
+    settings.ACCOUNT_LOGIN_METHODS = {"email"}
     settings.ACCOUNT_EMAIL_VERIFICATION = "mandatory"
     settings.SOCIALACCOUNT_AUTO_SIGNUP = True
 
@@ -360,7 +352,7 @@ def test_email_address_conflict_at_social_signup_form(
     settings.ACCOUNT_EMAIL_REQUIRED = True
     settings.ACCOUNT_UNIQUE_EMAIL = True
     settings.ACCOUNT_USERNAME_REQUIRED = False
-    settings.ACCOUNT_AUTHENTICATION_METHOD = "email"
+    settings.ACCOUNT_LOGIN_METHODS = {"email"}
     settings.ACCOUNT_EMAIL_VERIFICATION = "mandatory"
     settings.SOCIALACCOUNT_AUTO_SIGNUP = True
 
@@ -392,7 +384,7 @@ def test_email_address_conflict_during_auto_signup(
     settings.ACCOUNT_EMAIL_REQUIRED = True
     settings.ACCOUNT_UNIQUE_EMAIL = True
     settings.ACCOUNT_USERNAME_REQUIRED = False
-    settings.ACCOUNT_AUTHENTICATION_METHOD = "email"
+    settings.ACCOUNT_LOGIN_METHODS = {"email"}
     settings.ACCOUNT_EMAIL_VERIFICATION = "mandatory"
     settings.SOCIALACCOUNT_AUTO_SIGNUP = True
 
@@ -418,7 +410,7 @@ def test_email_address_conflict_removes_conflicting_email(
     settings.ACCOUNT_EMAIL_REQUIRED = True
     settings.ACCOUNT_UNIQUE_EMAIL = True
     settings.ACCOUNT_USERNAME_REQUIRED = False
-    settings.ACCOUNT_AUTHENTICATION_METHOD = "email"
+    settings.ACCOUNT_LOGIN_METHODS = {"email"}
     settings.ACCOUNT_EMAIL_VERIFICATION = "optional"
     settings.SOCIALACCOUNT_AUTO_SIGNUP = True
     settings.SOCIALACCOUNT_EMAIL_AUTHENTICATION = False

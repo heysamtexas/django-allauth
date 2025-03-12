@@ -1,8 +1,9 @@
-from typing import Dict, Optional
+from typing import Any, Dict, Optional
 
 from django.core.exceptions import ImproperlyConfigured, PermissionDenied
 
 from allauth.account.utils import get_next_redirect_url, get_request_param
+from allauth.core import context
 from allauth.socialaccount import app_settings
 from allauth.socialaccount.adapter import get_adapter
 from allauth.socialaccount.internal import statekit
@@ -120,13 +121,17 @@ class Provider:
             provider=self.sub_id,
         )
         email_addresses = self.extract_email_addresses(response)
-        self.cleanup_email_addresses(
+        email = self.cleanup_email_addresses(
             common_fields.get("email"),
             email_addresses,
             email_verified=common_fields.get("email_verified"),
         )
+        if email:
+            common_fields["email"] = email
         sociallogin = SocialLogin(
-            account=socialaccount, email_addresses=email_addresses
+            provider=self,
+            account=socialaccount,
+            email_addresses=email_addresses,
         )
         user = sociallogin.user = adapter.new_user(request, sociallogin)
         user.set_unusable_password()
@@ -165,7 +170,9 @@ class Provider:
         """
         return {}
 
-    def cleanup_email_addresses(self, email, addresses, email_verified=False):
+    def cleanup_email_addresses(
+        self, email: Optional[str], addresses: list, email_verified: bool = False
+    ) -> Optional[str]:
         # Avoid loading models before adapters have been registered.
         from allauth.account.models import EmailAddress
 
@@ -180,6 +187,12 @@ class Provider:
         for address in addresses:
             if adapter.is_email_verified(self, address.email):
                 address.verified = True
+
+        # Sort in order of importance (primary, verified...)
+        addresses.sort(key=lambda a: (a.primary, a.verified, a.email), reverse=True)
+        if not email and addresses:
+            email = addresses[0].email
+        return email
 
     def extract_email_addresses(self, data):
         """
@@ -221,6 +234,20 @@ class Provider:
     def sub_id(self) -> str:
         return (
             (self.app.provider_id or self.app.provider) if self.uses_apps else self.id
+        )
+
+    def serialize(self) -> Dict[str, Any]:
+        ret = {"id": self.id}
+        if self.uses_apps:
+            ret["app.client_id"] = self.app.client_id
+        return ret
+
+    @classmethod
+    def deserialize(cls, data: Dict[str, Any]) -> "Provider":
+        return get_adapter().get_provider(
+            context.request,
+            provider=data["id"],
+            client_id=data.get("app.client_id"),
         )
 
 
@@ -307,6 +334,7 @@ class ProviderAccount:
                         "name",
                         "display_name",
                         "displayName",
+                        "displayname",
                         "Display_Name",
                         "nickname",
                     ],

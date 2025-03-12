@@ -4,7 +4,7 @@ import {
   createBrowserRouter,
   RouterProvider
 } from 'react-router-dom'
-import Dashboard from './Dashboard'
+import Calculator from './Calculator'
 import Login from './account/Login'
 import RequestLoginCode from './account/RequestLoginCode'
 import ConfirmLoginCode from './account/ConfirmLoginCode'
@@ -16,28 +16,33 @@ import Home from './Home'
 import ChangeEmail from './account/ChangeEmail'
 import ManageProviders from './socialaccount/ManageProviders'
 import VerifyEmail, { loader as verifyEmailLoader } from './account/VerifyEmail'
+import VerifyEmailByCode from './account/VerifyEmailByCode'
 import VerificationEmailSent from './account/VerificationEmailSent'
 import RequestPasswordReset from './account/RequestPasswordReset'
+import ConfirmPasswordResetCode from './account/ConfirmPasswordResetCode'
 import ChangePassword from './account/ChangePassword'
 import MFAOverview, { loader as mfaOverviewLoader } from './mfa/MFAOverview'
 import ActivateTOTP, { loader as activateTOTPLoader } from './mfa/ActivateTOTP'
 import DeactivateTOTP from './mfa/DeactivateTOTP'
 import RecoveryCodes, { loader as recoveryCodesLoader } from './mfa/RecoveryCodes'
 import AddWebAuthn from './mfa/AddWebAuthn'
+import SignupByPasskey from './mfa/SignupByPasskey'
 import ReauthenticateWebAuthn from './mfa/ReauthenticateWebAuthn'
 import ListWebAuthn, { loader as listWebAuthnLoader } from './mfa/ListWebAuthn'
 import GenerateRecoveryCodes, { loader as generateRecoveryCodesLoader } from './mfa/GenerateRecoveryCodes'
-import ResetPassword, { loader as resetPasswordLoader } from './account/ResetPassword'
+import { resetPasswordByLinkLoader, ResetPasswordByCode, ResetPasswordByLink } from './account/ResetPassword'
 import AuthenticateTOTP from './mfa/AuthenticateTOTP'
 import AuthenticateRecoveryCodes from './mfa/AuthenticateRecoveryCodes'
 import AuthenticateWebAuthn from './mfa/AuthenticateWebAuthn'
 import ReauthenticateRecoveryCodes from './mfa/ReauthenticateRecoveryCodes'
 import ReauthenticateTOTP from './mfa/ReauthenticateTOTP'
+import CreateSignupPasskey from './mfa/CreateSignupPasskey'
 import Reauthenticate from './account/Reauthenticate'
 import Sessions from './usersessions/Sessions'
 import Root from './Root'
+import { useConfig } from './auth/hooks'
 
-function createRouter () {
+function createRouter (config) {
   return createBrowserRouter([
     {
       path: '/',
@@ -48,8 +53,8 @@ function createRouter () {
           element: <Home />
         },
         {
-          path: '/dashboard',
-          element: <AuthenticatedRoute><Dashboard /></AuthenticatedRoute>
+          path: '/calculator',
+          element: <Calculator />
         },
         {
           path: '/account/login',
@@ -88,8 +93,16 @@ function createRouter () {
           element: <AnonymousRoute><Signup /></AnonymousRoute>
         },
         {
+          path: '/account/signup/passkey',
+          element: <AnonymousRoute><SignupByPasskey /></AnonymousRoute>
+        },
+        {
+          path: '/account/signup/passkey/create',
+          element: <AnonymousRoute><CreateSignupPasskey /></AnonymousRoute>
+        },
+        {
           path: '/account/verify-email',
-          element: <VerificationEmailSent />
+          element: config.data.account.email_verification_by_code_enabled ? <VerifyEmailByCode /> : <VerificationEmailSent />
         },
         {
           path: '/account/verify-email/:key',
@@ -101,9 +114,17 @@ function createRouter () {
           element: <AnonymousRoute><RequestPasswordReset /></AnonymousRoute>
         },
         {
+          path: '/account/password/reset/confirm',
+          element: <AnonymousRoute><ConfirmPasswordResetCode /></AnonymousRoute>
+        },
+        {
+          path: '/account/password/reset/complete',
+          element: <AnonymousRoute><ResetPasswordByCode /></AnonymousRoute>
+        },
+        {
           path: '/account/password/reset/key/:key',
-          element: <AnonymousRoute><ResetPassword /></AnonymousRoute>,
-          loader: resetPasswordLoader
+          element: <AnonymousRoute><ResetPasswordByLink /></AnonymousRoute>,
+          loader: resetPasswordByLinkLoader
         },
         {
           path: '/account/password/change',
@@ -184,8 +205,9 @@ export default function Router () {
   // even before the <AuthContext/> trigger the initial loading of the auth.
   // state.
   const [router, setRouter] = useState(null)
+  const config = useConfig()
   useEffect(() => {
-    setRouter(createRouter())
-  }, [])
+    setRouter(createRouter(config))
+  }, [config])
   return router ? <RouterProvider router={router} /> : null
 }

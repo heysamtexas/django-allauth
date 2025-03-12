@@ -8,7 +8,7 @@ r"""
 
 """
 
-VERSION = (64, 1, 0, "dev", 0)
+VERSION = (65, 5, 0, "dev", 0)
 
 __title__ = "django-allauth"
 __version_info__ = VERSION
@@ -17,4 +17,4 @@ __version__ = ".".join(map(str, VERSION[:3])) + (
 )
 __author__ = "Raymond Penners"
 __license__ = "MIT"
-__copyright__ = "Copyright 2010-2024 Raymond Penners and contributors"
+__copyright__ = "Copyright 2010-2025 Raymond Penners and contributors"

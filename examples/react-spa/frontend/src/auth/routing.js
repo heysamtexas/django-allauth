@@ -7,7 +7,7 @@ import { Flows, AuthenticatorType } from '../lib/allauth'
 
 export const URLs = Object.freeze({
   LOGIN_URL: '/account/login',
-  LOGIN_REDIRECT_URL: '/dashboard',
+  LOGIN_REDIRECT_URL: '/calculator',
   LOGOUT_REDIRECT_URL: '/'
 })
 
@@ -16,6 +16,7 @@ flow2path[Flows.LOGIN] = '/account/login'
 flow2path[Flows.LOGIN_BY_CODE] = '/account/login/code/confirm'
 flow2path[Flows.SIGNUP] = '/account/signup'
 flow2path[Flows.VERIFY_EMAIL] = '/account/verify-email'
+flow2path[Flows.PASSWORD_RESET_BY_CODE] = '/account/password/reset/confirm'
 flow2path[Flows.PROVIDER_SIGNUP] = '/account/provider/signup'
 flow2path[Flows.REAUTHENTICATE] = '/account/reauthenticate'
 flow2path[`${Flows.MFA_AUTHENTICATE}:${AuthenticatorType.TOTP}`] = '/account/authenticate/totp'
@@ -24,6 +25,7 @@ flow2path[`${Flows.MFA_AUTHENTICATE}:${AuthenticatorType.WEBAUTHN}`] = '/account
 flow2path[`${Flows.MFA_REAUTHENTICATE}:${AuthenticatorType.TOTP}`] = '/account/reauthenticate/totp'
 flow2path[`${Flows.MFA_REAUTHENTICATE}:${AuthenticatorType.RECOVERY_CODES}`] = '/account/reauthenticate/recovery-codes'
 flow2path[`${Flows.MFA_REAUTHENTICATE}:${AuthenticatorType.WEBAUTHN}`] = '/account/reauthenticate/webauthn'
+flow2path[Flows.MFA_WEBAUTHN_SIGNUP] = '/account/signup/passkey/create'
 
 export function pathForFlow (flow, typ) {
   let key = flow.id

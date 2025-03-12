@@ -1,6 +1,7 @@
 import html
 import json
 import string
+import typing
 import warnings
 from urllib.parse import urlparse
 
@@ -21,29 +22,25 @@ from django.contrib.auth.password_validation import (
 from django.contrib.sites.shortcuts import get_current_site
 from django.core.exceptions import FieldDoesNotExist
 from django.core.mail import EmailMessage, EmailMultiAlternatives
-from django.http import (
-    HttpResponse,
-    HttpResponseRedirect,
-    HttpResponseServerError,
-)
+from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import resolve_url
 from django.template import TemplateDoesNotExist
 from django.template.loader import render_to_string
 from django.urls import reverse
-from django.urls.exceptions import NoReverseMatch
 from django.utils import timezone
 from django.utils.crypto import get_random_string
 from django.utils.encoding import force_str
 from django.utils.translation import gettext_lazy as _
 
 from allauth import app_settings as allauth_app_settings
-from allauth.account import signals
-from allauth.account.app_settings import AuthenticationMethod
+from allauth.account import app_settings, signals
 from allauth.core import context, ratelimit
 from allauth.core.internal.adapter import BaseAdapter
+from allauth.core.internal.httpkit import (
+    headed_redirect_response,
+    is_headless_request,
+)
 from allauth.utils import generate_unique_username, import_attribute
-
-from . import app_settings
 
 
 class DefaultAccountAdapter(BaseAdapter):
@@ -65,17 +62,22 @@ class DefaultAccountAdapter(BaseAdapter):
         "email_password_mismatch": _(
             "The email address and/or password you specified are not correct."
         ),
+        "phone_password_mismatch": _(
+            "The phone number and/or password you specified are not correct."
+        ),
         "email_taken": _("A user is already registered with this email address."),
         "enter_current_password": _("Please type your current password."),
         "incorrect_code": _("Incorrect code."),
         "incorrect_password": _("Incorrect password."),
         "invalid_or_expired_key": _("Invalid or expired key."),
+        "invalid_login": _("Invalid login."),
         "invalid_password_reset": _("The password reset token was invalid."),
         "max_email_addresses": _("You cannot add more than %d email addresses."),
         "too_many_login_attempts": _(
             "Too many failed login attempts. Try again later."
         ),
         "unknown_email": _("The email address is not assigned to any user account"),
+        "unknown_phone": _("The phone number is not assigned to any user account"),
         "unverified_primary_email": _("Your primary email address must be verified."),
         "username_blacklisted": _(
             "Username can not be used. Please use other username."
@@ -86,6 +88,8 @@ class DefaultAccountAdapter(BaseAdapter):
         "username_taken": AbstractUser._meta.get_field("username").error_messages[
             "unique"
         ],
+        "select_only_one": _("Please select only one."),
+        "same_as_current": _("The new value must be different from the current one."),
     }
 
     def stash_verified_email(self, request, email):
@@ -95,12 +99,6 @@ class DefaultAccountAdapter(BaseAdapter):
         ret = request.session.get("account_verified_email")
         request.session["account_verified_email"] = None
         return ret
-
-    def stash_user(self, request, user):
-        request.session["account_user"] = user
-
-    def unstash_user(self, request):
-        return request.session.pop("account_user", None)
 
     def is_email_verified(self, request, email):
         """
@@ -114,7 +112,10 @@ class DefaultAccountAdapter(BaseAdapter):
             ret = verified_email.lower() == email.lower()
         return ret
 
-    def can_delete_email(self, email_address):
+    def can_delete_email(self, email_address) -> bool:
+        """
+        Returns whether or not the given email address can be deleted.
+        """
         from allauth.account.models import EmailAddress
 
         has_other = (
@@ -122,9 +123,7 @@ class DefaultAccountAdapter(BaseAdapter):
             .exclude(pk=email_address.pk)
             .exists()
         )
-        login_by_email = (
-            app_settings.AUTHENTICATION_METHOD == AuthenticationMethod.EMAIL
-        )
+        login_by_email = app_settings.LOGIN_METHODS == {app_settings.LoginMethod.EMAIL}
         if email_address.primary:
             if has_other:
                 # Don't allow, let the user mark one of the others as primary
@@ -143,7 +142,10 @@ class DefaultAccountAdapter(BaseAdapter):
         else:
             return True
 
-    def format_email_subject(self, subject):
+    def format_email_subject(self, subject) -> str:
+        """
+        Formats the given email subject.
+        """
         prefix = app_settings.EMAIL_SUBJECT_PREFIX
         if prefix is None:
             site = get_current_site(context.request)
@@ -197,16 +199,21 @@ class DefaultAccountAdapter(BaseAdapter):
             msg.content_subtype = "html"  # Main content is now text/html
         return msg
 
-    def send_mail(self, template_prefix, email, context):
+    def send_mail(self, template_prefix: str, email: str, context: dict) -> None:
+        request = globals()["context"].request
         ctx = {
+            "request": request,
             "email": email,
-            "current_site": get_current_site(globals()["context"].request),
+            "current_site": get_current_site(request),
         }
         ctx.update(context)
         msg = self.render_mail(template_prefix, email, ctx)
         msg.send()
 
     def get_signup_redirect_url(self, request):
+        """
+        Returns the default URL to redirect to directly after signing up.
+        """
         return resolve_url(app_settings.SIGNUP_REDIRECT_URL)
 
     def get_login_redirect_url(self, request):
@@ -215,7 +222,7 @@ class DefaultAccountAdapter(BaseAdapter):
         that URLs passed explicitly (e.g. by passing along a `next`
         GET parameter) take precedence over the value returned here.
         """
-        assert request.user.is_authenticated
+        assert request.user.is_authenticated  # nosec
         url = getattr(settings, "LOGIN_REDIRECT_URLNAME", None)
         if url:
             warnings.warn(
@@ -389,7 +396,7 @@ class DefaultAccountAdapter(BaseAdapter):
         Wrapper of `django.contrib.messages.add_message`, that reads
         the message text from a template.
         """
-        if getattr(getattr(request, "allauth", None), "headless", None):
+        if is_headless_request(request):
             return
         if "django.contrib.messages" in settings.INSTALLED_APPS:
             if message:
@@ -483,9 +490,14 @@ class DefaultAccountAdapter(BaseAdapter):
     ):
         from .utils import get_login_redirect_url
 
-        response = HttpResponseRedirect(
-            get_login_redirect_url(request, redirect_url, signup=signup)
-        )
+        if is_headless_request(request):
+            from allauth.headless.base.response import AuthenticationResponse
+
+            response = AuthenticationResponse(request)
+        else:
+            response = HttpResponseRedirect(
+                get_login_redirect_url(request, redirect_url, signup=signup)
+            )
 
         if signal_kwargs is None:
             signal_kwargs = {}
@@ -531,11 +543,14 @@ class DefaultAccountAdapter(BaseAdapter):
         """
         Marks the email address as confirmed on the db
         """
-        from allauth.account.internal.flows import manage_email
+        from allauth.account.internal.flows import email_verification
 
-        return manage_email.verify_email(request, email_address)
+        return email_verification.verify_email(request, email_address)
 
-    def set_password(self, user, password):
+    def set_password(self, user, password) -> None:
+        """
+        Sets the password for the user.
+        """
         user.set_password(password)
         user.save()
 
@@ -569,9 +584,19 @@ class DefaultAccountAdapter(BaseAdapter):
 
         return url_has_allowed_host_and_scheme(url, allowed_hosts=allowed_hosts)
 
+    def send_password_reset_mail(self, user, email, context):
+        """
+        Method intended to be overridden in case you need to customize the logic
+        used to determine whether a user is permitted to request a password reset.
+        For example, if you are enforcing something like "social only" authentication
+        in your app, you may want to intervene here by checking `user.has_usable_password`
+
+        """
+        return self.send_mail("account/email/password_reset_key", email, context)
+
     def get_reset_password_from_key_url(self, key):
         """
-        Method intented to be overriden in case the password reset email
+        Method intended to be overridden in case the password reset email
         needs to be adjusted.
         """
         from allauth.account.internal import flows
@@ -587,17 +612,14 @@ class DefaultAccountAdapter(BaseAdapter):
         """
         from allauth.account.internal import flows
 
-        return flows.manage_email.get_email_verification_url(request, emailconfirmation)
-
-    def should_send_confirmation_mail(self, request, email_address, signup):
-        send_email = ratelimit.consume(
-            request,
-            action="confirm_email",
-            key=email_address.email.lower(),
+        return flows.email_verification.get_email_verification_url(
+            request, emailconfirmation
         )
-        return send_email
 
-    def send_account_already_exists_mail(self, email):
+    def should_send_confirmation_mail(self, request, email_address, signup) -> bool:
+        return True
+
+    def send_account_already_exists_mail(self, email: str) -> None:
         from allauth.account.internal import flows
 
         signup_url = flows.signup.get_signup_url(context.request)
@@ -605,19 +627,26 @@ class DefaultAccountAdapter(BaseAdapter):
             context.request
         )
         ctx = {
-            "request": context.request,
             "signup_url": signup_url,
             "password_reset_url": password_reset_url,
         }
         self.send_mail("account/email/account_already_exists", email, ctx)
 
     def send_confirmation_mail(self, request, emailconfirmation, signup):
-        activate_url = self.get_email_confirmation_url(request, emailconfirmation)
         ctx = {
             "user": emailconfirmation.email_address.user,
-            "activate_url": activate_url,
-            "key": emailconfirmation.key,
         }
+        if app_settings.EMAIL_VERIFICATION_BY_CODE_ENABLED:
+            ctx.update({"code": emailconfirmation.key})
+        else:
+            ctx.update(
+                {
+                    "key": emailconfirmation.key,
+                    "activate_url": self.get_email_confirmation_url(
+                        request, emailconfirmation
+                    ),
+                }
+            )
         if signup:
             email_template = "account/email/email_confirmation_signup"
         else:
@@ -625,22 +654,10 @@ class DefaultAccountAdapter(BaseAdapter):
         self.send_mail(email_template, emailconfirmation.email_address.email, ctx)
 
     def respond_user_inactive(self, request, user):
-        try:
-            return HttpResponseRedirect(reverse("account_inactive"))
-        except NoReverseMatch:
-            if allauth_app_settings.HEADLESS_ONLY:
-                # The response we would be rendering here is not actually used.
-                return HttpResponseServerError()
-            raise
+        return headed_redirect_response("account_inactive")
 
     def respond_email_verification_sent(self, request, user):
-        try:
-            return HttpResponseRedirect(reverse("account_email_verification_sent"))
-        except NoReverseMatch:
-            if allauth_app_settings.HEADLESS_ONLY:
-                # The response we would be rendering here is not actually used.
-                return HttpResponseServerError()
-            raise
+        return headed_redirect_response("account_email_verification_sent")
 
     def _get_login_attempts_cache_key(self, request, **credentials):
         site = get_current_site(request)
@@ -689,6 +706,10 @@ class DefaultAccountAdapter(BaseAdapter):
         email = EmailAddress.objects.get_primary_email(user)
         if email:
             credentials["email"] = email
+        if app_settings.LoginMethod.PHONE in app_settings.LOGIN_METHODS:
+            phone_verified = self.get_phone(user)
+            if phone_verified:
+                credentials["phone"] = phone_verified[0]
         reauth_user = self.authenticate(context.request, **credentials)
         return reauth_user is not None and reauth_user.pk == user.pk
 
@@ -718,9 +739,16 @@ class DefaultAccountAdapter(BaseAdapter):
 
     def get_login_stages(self):
         ret = []
+        ret.append("allauth.account.stages.LoginByCodeStage")
+        ret.append("allauth.account.stages.PhoneVerificationStage")
         ret.append("allauth.account.stages.EmailVerificationStage")
         if allauth_app_settings.MFA_ENABLED:
+            from allauth.mfa import app_settings as mfa_settings
+
             ret.append("allauth.mfa.stages.AuthenticateStage")
+
+            if mfa_settings.PASSKEY_SIGNUP_ENABLED:
+                ret.append("allauth.mfa.webauthn.stages.PasskeySignupStage")
         return ret
 
     def get_reauthentication_methods(self, user):
@@ -776,13 +804,108 @@ class DefaultAccountAdapter(BaseAdapter):
             ctx.update(context)
         self.send_mail(template_prefix, email, ctx)
 
-    def generate_login_code(self):
+    def generate_login_code(self) -> str:
+        """
+        Generates a new login code.
+        """
+        return self._generate_code()
+
+    def generate_password_reset_code(self) -> str:
+        """
+        Generates a new password reset code.
+        """
+        return self._generate_code(length=8)
+
+    def generate_email_verification_code(self) -> str:
+        """
+        Generates a new email verification code.
+        """
+        return self._generate_code()
+
+    def generate_phone_verification_code(self) -> str:
+        """
+        Generates a new phone verification code.
+        """
+        return self._generate_code()
+
+    def _generate_code(self, length=6):
         forbidden_chars = "0OI18B2ZAEU"
         allowed_chars = string.ascii_uppercase + string.digits
         for ch in forbidden_chars:
             allowed_chars = allowed_chars.replace(ch, "")
-        return get_random_string(length=6, allowed_chars=allowed_chars)
+        return get_random_string(length=length, allowed_chars=allowed_chars)
+
+    def is_login_by_code_required(self, login) -> bool:
+        """
+        Returns whether or not login-by-code is required for the given
+        login.
+        """
+        from allauth.account import authentication
+
+        method = None
+        records = authentication.get_authentication_records(self.request)
+        if records:
+            method = records[-1]["method"]
+        if method == "code":
+            return False
+        value = app_settings.LOGIN_BY_CODE_REQUIRED
+        if isinstance(value, bool):
+            return value
+        if not value:
+            return False
+        return method is None or method in value
+
+    def phone_form_field(self, **kwargs):
+        """
+        Returns a form field used to input phone numbers.
+        """
+        from allauth.account.fields import PhoneField
+
+        return PhoneField(**kwargs)
+
+    def send_unknown_account_sms(self, phone: str, **kwargs):
+        """
+        In case enumeration prevention is enabled, and, a verification code
+        is requested for an unlisted phone number, this method is invoked to
+        send a text explaining that no account is on file.
+        """
+        pass
+
+    def send_verification_code_sms(self, user, phone: str, code: str, **kwargs):
+        """
+        Sends a verification code.
+        """
+        raise NotImplementedError
+
+    def set_phone(self, user, phone: str, verified: bool):
+        """
+        Sets the phone number (and verified status) for the given user.
+        """
+        raise NotImplementedError
+
+    def get_phone(self, user) -> typing.Optional[typing.Tuple[str, bool]]:
+        """
+        Returns the phone number stored for the given user. A tuple of the
+        phone number itself, and whether or not the phone number was verified is
+        returned.
+        """
+        raise NotImplementedError
+
+    def set_phone_verified(self, user, phone: str):
+        """
+        Marks the specified phone number for the given user as
+        verified. Note that the user is already expected to have
+        the phone number attached to the account.
+        """
+        raise NotImplementedError
+
+    def get_user_by_phone(self, phone: str):
+        """
+        Looks up a user given the specified phone number. Returns ``None`` if no user
+        was phone.
+        """
+        raise NotImplementedError
 
 
-def get_adapter(request=None):
+def get_adapter(request=None) -> DefaultAccountAdapter:
     return import_attribute(app_settings.ADAPTER)(request)

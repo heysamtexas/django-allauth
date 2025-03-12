@@ -255,6 +255,7 @@ SOCIALACCOUNT_PROVIDERS = {
 }
 
 ACCOUNT_LOGIN_BY_CODE_ENABLED = True
+ACCOUNT_ADAPTER = "tests.common.adapters.AccountAdapter"
 
 HEADLESS_ONLY = True
 HEADLESS_FRONTEND_URLS = {
@@ -262,7 +263,11 @@ HEADLESS_FRONTEND_URLS = {
     "account_reset_password": "/spa/password/reset/",
     "account_reset_password_from_key": "/spa/password/reset/{key}/",
     "account_signup": "/spa/signup",
+    "socialaccount_login_error": "/spa/error",
 }
+HEADLESS_SERVE_SPECIFICATION = True
+
 
 MFA_SUPPORTED_TYPES = ["totp", "webauthn", "recovery_codes"]
 MFA_PASSKEY_LOGIN_ENABLED = True
+MFA_PASSKEY_SIGNUP_ENABLED = True

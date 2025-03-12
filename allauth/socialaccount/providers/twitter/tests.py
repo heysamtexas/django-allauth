@@ -1,5 +1,8 @@
+from django.test import TestCase
+
+from allauth.socialaccount.models import SocialAccount
 from allauth.socialaccount.tests import OAuthTestsMixin
-from allauth.tests import MockedResponse, TestCase
+from allauth.tests import MockedResponse
 
 from .provider import TwitterProvider
 
@@ -31,7 +34,8 @@ class TwitterTests(OAuthTestsMixin, TestCase):
         return "pennersr"
 
     def test_login(self):
-        account = super(TwitterTests, self).test_login()
+        super().test_login()
+        account = SocialAccount.objects.get(uid="45671919")
         tw_account = account.get_provider_account()
         self.assertEqual(tw_account.get_screen_name(), "pennersr")
         self.assertEqual(

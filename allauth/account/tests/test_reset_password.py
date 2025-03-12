@@ -3,6 +3,7 @@ import json
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
 from django.core import mail
+from django.test import TestCase
 from django.test.utils import override_settings
 from django.urls import reverse, reverse_lazy
 from django.utils.http import urlencode
@@ -14,7 +15,6 @@ from allauth.account import app_settings
 from allauth.account.forms import ResetPasswordForm, default_token_generator
 from allauth.account.models import EmailAddress
 from allauth.account.utils import user_pk_to_url_str
-from allauth.tests import TestCase
 
 
 @pytest.fixture
@@ -32,12 +32,14 @@ def password_reset_url():
 @pytest.mark.django_db
 def test_reset_password_unknown_account(client, settings):
     settings.ACCOUNT_PREVENT_ENUMERATION = True
-    client.post(
+    resp = client.post(
         reverse("account_reset_password"),
         data={"email": "unknown@example.org"},
+        follow=True,
     )
     assert len(mail.outbox) == 1
     assert mail.outbox[0].to == ["unknown@example.org"]
+    assert resp.redirect_chain == [(reverse("account_reset_password_done"), 302)]
 
 
 @pytest.mark.django_db
@@ -67,7 +69,7 @@ def test_reset_password_next_url(client, user, query, expected_location):
     ACCOUNT_PREVENT_ENUMERATION=False,
     ACCOUNT_DEFAULT_HTTP_PROTOCOL="https",
     ACCOUNT_EMAIL_VERIFICATION=app_settings.EmailVerificationMethod.MANDATORY,
-    ACCOUNT_AUTHENTICATION_METHOD=app_settings.AuthenticationMethod.USERNAME,
+    ACCOUNT_LOGIN_METHODS={app_settings.AuthenticationMethod.USERNAME},
     ACCOUNT_SIGNUP_FORM_CLASS=None,
     ACCOUNT_EMAIL_SUBJECT_PREFIX=None,
     LOGIN_REDIRECT_URL="/accounts/profile/",
@@ -108,9 +110,7 @@ class ResetPasswordTests(TestCase):
         body = mail.outbox[0].body
         assert user.username in body
 
-    @override_settings(
-        ACCOUNT_AUTHENTICATION_METHOD=app_settings.AuthenticationMethod.EMAIL
-    )
+    @override_settings(ACCOUNT_LOGIN_METHODS={app_settings.AuthenticationMethod.EMAIL})
     def test_password_forgotten_no_username_hint(self):
         user = self._request_new_password()
         body = mail.outbox[0].body
@@ -160,9 +160,7 @@ class ResetPasswordTests(TestCase):
 
         self.assertTrue(resp.context_data["token_fail"])
 
-    @override_settings(
-        ACCOUNT_AUTHENTICATION_METHOD=app_settings.AuthenticationMethod.EMAIL
-    )
+    @override_settings(ACCOUNT_LOGIN_METHODS={app_settings.AuthenticationMethod.EMAIL})
     def test_password_reset_flow_with_another_user_logged_in(self):
         """
         Tests the password reset flow: if User B requested a password

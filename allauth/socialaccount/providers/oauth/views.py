@@ -2,6 +2,7 @@ import logging
 
 from django.urls import reverse
 
+from allauth.account.internal.decorators import login_not_required
 from allauth.socialaccount.adapter import get_adapter
 from allauth.socialaccount.helpers import (
     complete_social_login,
@@ -58,6 +59,7 @@ class OAuthAdapter:
 class OAuthView:
     @classmethod
     def adapter_view(cls, adapter):
+        @login_not_required
         def view(request, *args, **kwargs):
             self = cls()
             self.request = request
@@ -100,11 +102,12 @@ class OAuthCallbackView(OAuthView):
         try:
             access_token = client.get_access_token()
             token = SocialToken(
-                app=app,
                 token=access_token["oauth_token"],
                 # .get() -- e.g. Evernote does not feature a secret
                 token_secret=access_token.get("oauth_token_secret", ""),
             )
+            if app.pk:
+                token.app = app
             login = self.adapter.complete_login(
                 request, app, token, response=access_token
             )

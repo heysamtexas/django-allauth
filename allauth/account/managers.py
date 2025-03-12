@@ -1,4 +1,5 @@
 from datetime import timedelta
+from typing import Optional
 
 from django.db import models
 from django.db.models import Q
@@ -24,7 +25,7 @@ class EmailAddressManager(models.Manager):
         """
         Returns the email address the user is in the process of changing to, if any.
         """
-        assert app_settings.CHANGE_EMAIL
+        assert app_settings.CHANGE_EMAIL  # nosec
         return (
             self.model.objects.filter(user=user, verified=False).order_by("pk").last()
         )
@@ -34,7 +35,7 @@ class EmailAddressManager(models.Manager):
         Adds an email address the user wishes to change to, replacing his
         current email address once confirmed.
         """
-        assert app_settings.CHANGE_EMAIL
+        assert app_settings.CHANGE_EMAIL  # nosec
         instance = self.get_new(user)
         email = email.lower()
         if not instance:
@@ -69,7 +70,7 @@ class EmailAddressManager(models.Manager):
         except self.model.DoesNotExist:
             return None
 
-    def get_primary_email(self, user):
+    def get_primary_email(self, user) -> Optional[str]:
         from allauth.account.utils import user_email
 
         primary = self.get_primary(user)

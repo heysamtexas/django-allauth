@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [ main, '0.55.x' ]
+    branches: [ main ]
   pull_request:
-    branches: [ main, '0.55.x' ]
+    branches: [ main ]
 
 jobs:
   testenv:
@@ -12,9 +12,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        project: ['regular', 'headless_only']
+        project: ['regular', 'headless_only', 'login_required_mw']
         python-version: ['3.8', '3.9', '3.10', '3.11', '3.12']
-        django-version: ['main', '4.2', '5.0']
+        django-version: ['4.2', '5.0', '5.1']
         exclude:
           - python-version: '3.8'
             django-version: '5.0'
@@ -23,10 +23,33 @@ jobs:
             django-version: '5.0'
 
           - python-version: '3.8'
+            django-version: '5.1'
+
+          - python-version: '3.9'
+            django-version: '5.1'
+
+          - python-version: '3.8'
             django-version: 'main'
 
           - python-version: '3.9'
             django-version: 'main'
+
+          # Only test LoginRequiredMiddleware on latest Python/Django.
+          - project: 'login_required_mw'
+            python-version: '3.8'
+          - project: 'login_required_mw'
+            python-version: '3.9'
+          - project: 'login_required_mw'
+            python-version: '3.10'
+          - project: 'login_required_mw'
+            python-version: '3.11'
+          - project: 'login_required_mw'
+            django-version: 'main'
+          - project: 'login_required_mw'
+            django-version: '4.2'
+          - project: 'login_required_mw'
+            django-version: '5.0'
+
 
     steps:
     - uses: actions/checkout@v4
@@ -49,7 +72,7 @@ jobs:
         DJANGO: ${{ matrix.django-version }}
         PRJ: ${{ matrix.project }}
     - name: Coverage (Coveralls)
-      if: ${{ success() && matrix.django-version == '5.0' && matrix.python-version == '3.12' && matrix.project == 'regular' }}
+      if: ${{ success() && matrix.django-version == '5.1' && matrix.python-version == '3.12' && matrix.project == 'regular' }}
       run: coveralls --service=github
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -58,7 +81,7 @@ jobs:
     runs-on: ubuntu-22.04
     strategy:
       matrix:
-        extra-env: ['docs', 'black', 'isort', 'flake8', 'mypy', 'standardjs', 'djlint', 'compilemessages']
+        extra-env: ['docs', 'bandit', 'black', 'isort', 'flake8', 'mypy', 'standardjs', 'djlint', 'compilemessages']
     steps:
     - uses: actions/checkout@v4
     - uses: actions/setup-node@v4

@@ -11,8 +11,9 @@ def test_auth_unverified_email_and_mfa(
     headless_reverse,
     headless_client,
 ):
-    settings.ACCOUNT_AUTHENTICATION_METHOD = "email"
+    settings.ACCOUNT_LOGIN_METHODS = {"email"}
     settings.ACCOUNT_EMAIL_VERIFICATION = "mandatory"
+    settings.ACCOUNT_LOGIN_ON_EMAIL_CONFIRMATION = True
     password = password_factory()
     user = user_factory(email_verified=False, password=password, with_totp=True)
     resp = client.post(
@@ -45,10 +46,15 @@ def test_auth_unverified_email_and_mfa(
         flows.append(
             {
                 "id": "provider_redirect",
-                "providers": ["dummy", "openid_connect", "openid_connect"],
+                "providers": ["dummy", "unittest-server", "other-server"],
             }
         )
-    flows.append({"id": "provider_token", "providers": ["dummy"]})
+    flows.append(
+        {
+            "id": "provider_token",
+            "providers": ["dummy", "unittest-server", "other-server"],
+        }
+    )
     flows.append({"id": "mfa_login_webauthn"})
     flows.append(
         {
@@ -83,3 +89,33 @@ def test_auth_unverified_email_and_mfa(
             content_type="application/json",
         )
     assert resp.status_code == 200
+
+
+def test_dangling_mfa_is_logged_out(
+    client,
+    user_with_totp,
+    password_factory,
+    settings,
+    totp_validation_bypass,
+    headless_reverse,
+    headless_client,
+    user_password,
+):
+    settings.ACCOUNT_LOGIN_METHODS = {"email"}
+    resp = client.post(
+        headless_reverse("headless:account:login"),
+        data={
+            "email": user_with_totp.email,
+            "password": user_password,
+        },
+        content_type="application/json",
+    )
+    assert resp.status_code == 401
+    data = resp.json()
+    flow = [f for f in data["data"]["flows"] if f["id"] == Flow.MFA_AUTHENTICATE][0]
+    assert flow["is_pending"]
+    assert flow["types"] == ["totp"]
+    resp = client.delete(headless_reverse("headless:account:current_session"))
+    data = resp.json()
+    assert resp.status_code == 401
+    assert all(not f.get("is_pending") for f in data["data"]["flows"])

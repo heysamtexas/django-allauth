@@ -18,6 +18,11 @@ def build_urlpatterns(client):
             views.ReauthenticateView.as_api_view(client=client),
             name="reauthenticate",
         ),
+        path(
+            "code/confirm",
+            views.ConfirmLoginCodeView.as_api_view(client=client),
+            name="confirm_login_code",
+        ),
     ]
     if not allauth_settings.SOCIALACCOUNT_ONLY:
         account_patterns.extend(
@@ -31,6 +36,11 @@ def build_urlpatterns(client):
                     "email",
                     views.ManageEmailView.as_api_view(client=client),
                     name="manage_email",
+                ),
+                path(
+                    "phone",
+                    views.ManagePhoneView.as_api_view(client=client),
+                    name="manage_phone",
                 ),
             ]
         )
@@ -70,6 +80,11 @@ def build_urlpatterns(client):
                     views.VerifyEmailView.as_api_view(client=client),
                     name="verify_email",
                 ),
+                path(
+                    "phone/verify",
+                    views.VerifyPhoneView.as_api_view(client=client),
+                    name="verify_phone",
+                ),
             ]
         )
     if account_settings.LOGIN_BY_CODE_ENABLED:
@@ -79,11 +94,6 @@ def build_urlpatterns(client):
                     "code/request",
                     views.RequestLoginCodeView.as_api_view(client=client),
                     name="request_login_code",
-                ),
-                path(
-                    "code/confirm",
-                    views.ConfirmLoginCodeView.as_api_view(client=client),
-                    name="confirm_login_code",
                 ),
             ]
         )

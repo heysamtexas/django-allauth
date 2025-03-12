@@ -1,3 +1,6 @@
+from typing import Optional, Tuple
+
+
 class AppSettings:
     def __init__(self, prefix):
         self.prefix = prefix
@@ -22,6 +25,20 @@ class AppSettings:
         )
         cls = import_attribute(path)
         return cls()
+
+    @property
+    def SERVE_SPECIFICATION(self) -> bool:
+        return self._setting("SERVE_SPECIFICATION", False)
+
+    @property
+    def SPECIFICATION_TEMPLATE_NAME(self) -> Optional[str]:
+        return self._setting(
+            "SPECIFICATION_TEMPLATE_NAME", "headless/spec/redoc_cdn.html"
+        )
+
+    @property
+    def CLIENTS(self) -> Tuple[str]:
+        return tuple(self._setting("CLIENTS", ("browser", "app")))
 
     @property
     def FRONTEND_URLS(self):

@@ -1,6 +1,7 @@
+from typing import List, Optional
+
 from django.contrib import messages
 from django.http import HttpRequest
-from django.urls import reverse
 
 from allauth.account import app_settings, signals
 from allauth.account.adapter import get_adapter
@@ -8,8 +9,6 @@ from allauth.account.internal.flows.reauthentication import (
     raise_if_reauthentication_required,
 )
 from allauth.account.models import EmailAddress
-from allauth.core.internal.httpkit import get_frontend_url
-from allauth.utils import build_absolute_uri
 
 
 def can_delete_email(email_address: EmailAddress) -> bool:
@@ -33,7 +32,7 @@ def delete_email(request: HttpRequest, email_address: EmailAddress) -> bool:
     else:
         email_address.remove()
         signals.email_removed.send(
-            sender=request.user.__class__,
+            sender=EmailAddress,
             request=request,
             user=request.user,
             email_address=email_address,
@@ -65,12 +64,13 @@ def add_email(request: HttpRequest, form):
         "account/messages/email_confirmation_sent.txt",
         {"email": form.cleaned_data["email"]},
     )
-    signals.email_added.send(
-        sender=request.user.__class__,
-        request=request,
-        user=request.user,
-        email_address=email_address,
-    )
+    if email_address.pk:
+        signals.email_added.send(
+            sender=EmailAddress,
+            request=request,
+            user=request.user,
+            email_address=email_address,
+        )
 
 
 def can_mark_as_primary(email_address: EmailAddress):
@@ -83,8 +83,6 @@ def can_mark_as_primary(email_address: EmailAddress):
 
 
 def mark_as_primary(request: HttpRequest, email_address: EmailAddress):
-    from allauth.account.utils import emit_email_changed
-
     if app_settings.REAUTHENTICATION_REQUIRED:
         raise_if_reauthentication_required(request)
 
@@ -100,7 +98,7 @@ def mark_as_primary(request: HttpRequest, email_address: EmailAddress):
             "account/messages/unverified_primary_email.txt",
         )
     else:
-        assert request.user.is_authenticated
+        assert request.user.is_authenticated  # nosec
         from_email_address = EmailAddress.objects.filter(
             user=request.user, primary=True
         ).first()
@@ -116,40 +114,76 @@ def mark_as_primary(request: HttpRequest, email_address: EmailAddress):
     return success
 
 
-def verify_email(request: HttpRequest, email_address: EmailAddress) -> bool:
-    """
-    Marks the email address as confirmed on the db
-    """
-    from allauth.account.models import EmailAddress
-    from allauth.account.utils import emit_email_changed
-
-    from_email_address = (
-        EmailAddress.objects.filter(user_id=email_address.user_id)
-        .exclude(pk=email_address.pk)
-        .first()
+def emit_email_changed(request, from_email_address, to_email_address) -> None:
+    user = to_email_address.user
+    signals.email_changed.send(
+        sender=EmailAddress,
+        request=request,
+        user=user,
+        from_email_address=from_email_address,
+        to_email_address=to_email_address,
     )
-    if not email_address.set_verified(commit=False):
-        return False
-    email_address.set_as_primary(conditional=(not app_settings.CHANGE_EMAIL))
-    email_address.save(update_fields=["verified", "primary"])
-    if app_settings.CHANGE_EMAIL:
-        for instance in EmailAddress.objects.filter(
-            user_id=email_address.user_id
-        ).exclude(pk=email_address.pk):
-            instance.remove()
-        emit_email_changed(request, from_email_address, email_address)
-    return True
+    if from_email_address:
+        get_adapter().send_notification_mail(
+            "account/email/email_changed",
+            user,
+            context={
+                "from_email": from_email_address.email,
+                "to_email": to_email_address.email,
+            },
+            email=from_email_address.email,
+        )
 
 
-def get_email_verification_url(request: HttpRequest, emailconfirmation) -> str:
-    """Constructs the email confirmation (activation) url.
-
-    Note that if you have architected your system such that email
-    confirmations are sent outside of the request context `request`
-    can be `None` here.
+def assess_unique_email(email) -> Optional[bool]:
     """
-    url = get_frontend_url(request, "account_confirm_email", key=emailconfirmation.key)
-    if not url:
-        url = reverse("account_confirm_email", args=[emailconfirmation.key])
-        url = build_absolute_uri(request, url)
-    return url
+    True -- email is unique
+    False -- email is already in use
+    None -- email is in use, but we should hide that using email verification.
+    """
+    from allauth.account.utils import filter_users_by_email
+
+    if not filter_users_by_email(email):
+        # All good.
+        return True
+    elif not app_settings.PREVENT_ENUMERATION:
+        # Fail right away.
+        return False
+    elif (
+        app_settings.EMAIL_VERIFICATION
+        == app_settings.EmailVerificationMethod.MANDATORY
+    ):
+        # In case of mandatory verification and enumeration prevention,
+        # we can avoid creating a new account with the same (unverified)
+        # email address, because we are going to send an email anyway.
+        assert app_settings.PREVENT_ENUMERATION  # nosec
+        return None
+    elif app_settings.PREVENT_ENUMERATION == "strict":
+        # We're going to be strict on enumeration prevention, and allow for
+        # this email address to pass even though it already exists. In this
+        # scenario, you can signup multiple times using the same email
+        # address resulting in multiple accounts with an unverified email.
+        return True
+    else:
+        assert app_settings.PREVENT_ENUMERATION is True  # nosec
+        # Conflict. We're supposed to prevent enumeration, but we can't
+        # because that means letting the user in, while emails are required
+        # to be unique. In this case, uniqueness takes precedence over
+        # enumeration prevention.
+        return False
+
+
+def list_email_addresses(request, user) -> List[EmailAddress]:
+    addresses = list(EmailAddress.objects.filter(user=user))
+    if app_settings.EMAIL_VERIFICATION_BY_CODE_ENABLED:
+        from allauth.account.internal.flows.email_verification_by_code import (
+            EmailVerificationProcess,
+        )
+
+        process = EmailVerificationProcess.resume(request)
+        if process:
+            email_address = process.email_address
+            if email_address.user_id == user.pk:
+                addresses.append(email_address)
+
+    return addresses

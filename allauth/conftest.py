@@ -1,5 +1,8 @@
+import importlib
 import json
 import random
+import re
+import sys
 import time
 import uuid
 from contextlib import contextmanager
@@ -8,6 +11,7 @@ from unittest.mock import Mock, PropertyMock, patch
 from django.contrib.auth import get_user_model
 from django.contrib.messages.middleware import MessageMiddleware
 from django.contrib.sessions.middleware import SessionMiddleware
+from django.urls import clear_url_caches, set_urlconf
 
 import pytest
 
@@ -53,17 +57,26 @@ def user_password(password_factory):
 
 
 @pytest.fixture
-def user_factory(email_factory, db, user_password):
+def email_verified():
+    return True
+
+
+@pytest.fixture
+def user_factory(email_factory, db, user_password, email_verified):
     def factory(
         email=None,
         username=None,
         commit=True,
         with_email=True,
-        email_verified=True,
+        email_verified=email_verified,
         password=None,
+        phone=None,
+        phone_verified=False,
         with_emailaddress=True,
         with_totp=False,
     ):
+        from allauth.account.adapter import get_adapter
+
         if not username:
             username = uuid.uuid4().hex
 
@@ -72,7 +85,7 @@ def user_factory(email_factory, db, user_password):
 
         User = get_user_model()
         user = User()
-        if password == "!":
+        if password == "!":  # nosec
             user.password = password
         else:
             user.set_password(user_password if password is None else password)
@@ -91,6 +104,8 @@ def user_factory(email_factory, db, user_password):
             from allauth.mfa.totp.internal import auth
 
             auth.TOTP.activate(user, auth.generate_totp_secret())
+        if phone:
+            get_adapter().set_phone(user, phone, phone_verified)
         return user
 
     return factory
@@ -104,7 +119,9 @@ def email_factory():
                 username = uuid.uuid4().hex
             email = f"{username}@{uuid.uuid4().hex}.org"
         if mixed_case:
-            email = "".join([random.choice([c.upper(), c.lower()]) for c in email])
+            email = "".join(
+                [random.choice([c.upper(), c.lower()]) for c in email]  # nosec
+            )
         else:
             email = email.lower()
         return email
@@ -233,6 +250,11 @@ def provider_id():
 
 
 @pytest.fixture
+def openid_connect_provider_id():
+    return "unittest-server"
+
+
+@pytest.fixture
 def password_reset_key_generator():
     def f(user):
         from allauth.account import app_settings
@@ -251,6 +273,13 @@ def google_provider_settings(settings):
     gsettings = {"APPS": [{"client_id": "client_id", "secret": "secret"}]}
     settings.SOCIALACCOUNT_PROVIDERS = {"google": gsettings}
     return gsettings
+
+
+@pytest.fixture
+def twitter_provider_settings(settings):
+    tsettings = {"APPS": [{"client_id": "client_id", "secret": "secret"}]}
+    settings.SOCIALACCOUNT_PROVIDERS = {"twitter": tsettings}
+    return tsettings
 
 
 @pytest.fixture
@@ -276,7 +305,11 @@ def passkey(user):
     authenticator = Authenticator.objects.create(
         user=user,
         type=Authenticator.Type.WEBAUTHN,
-        data={"name": "Test passkey", "passwordless": True},
+        data={
+            "name": "Test passkey",
+            "passwordless": True,
+            "credential": {},
+        },
     )
     return authenticator
 
@@ -313,3 +346,117 @@ def request_factory(rf):
             return request
 
     return RequestFactory()
+
+
+@pytest.fixture
+def get_last_email_verification_code():
+    from allauth.account.internal.flows import email_verification_by_code
+
+    def f(client, mailoutbox):
+        code = re.search(
+            "\n[0-9a-z]{6}\n", mailoutbox[0].body, re.I | re.DOTALL | re.MULTILINE
+        )[0].strip()
+        if hasattr(client, "headless_session"):
+            session = client.headless_session()
+        else:
+            session = client.session
+        assert (
+            session[email_verification_by_code.EMAIL_VERIFICATION_CODE_SESSION_KEY][
+                "code"
+            ]
+            == code
+        )
+        return code
+
+    return f
+
+
+@pytest.fixture
+def get_last_password_reset_code():
+    from allauth.account.internal.flows import password_reset_by_code
+
+    def f(client, mailoutbox):
+        code = re.search(
+            "\n[0-9a-z]{8}\n", mailoutbox[0].body, re.I | re.DOTALL | re.MULTILINE
+        )[0].strip()
+        if hasattr(client, "headless_session"):
+            session = client.headless_session()
+        else:
+            session = client.session
+        assert (
+            session[password_reset_by_code.PASSWORD_RESET_VERIFICATION_SESSION_KEY][
+                "code"
+            ]
+            == code
+        )
+        return code
+
+    return f
+
+
+@pytest.fixture
+def settings_impacting_urls(settings):
+    @contextmanager
+    def f(**kv):
+        def reload_urlconf():
+            clear_url_caches()
+            for urlconf in [
+                settings.ROOT_URLCONF,
+                "allauth.account.urls",
+                "allauth.urls",
+            ]:
+                if urlconf in sys.modules:
+                    importlib.reload(sys.modules[urlconf])
+            set_urlconf(None)
+
+        old_values = {}
+        for k, v in kv.items():
+            if hasattr(settings, k):
+                old_values[k] = getattr(settings, k)
+            setattr(settings, k, v)
+        reload_urlconf()
+        yield
+        for k, v in kv.items():
+            if k in old_values:
+                setattr(settings, k, old_values[k])
+            else:
+                delattr(settings, k)
+        reload_urlconf()
+
+    return f
+
+
+@pytest.fixture(autouse=True)
+def clear_phone_stub():
+    from tests.common import phone_stub
+
+    yield
+    phone_stub.clear()
+
+
+@pytest.fixture
+def sms_outbox():
+    from tests.common import phone_stub
+
+    return phone_stub.sms_outbox
+
+
+@pytest.fixture
+def phone_factory():
+    def f():
+        return f"+31{random.randint(1, 10**10):010}"
+
+    return f
+
+
+@pytest.fixture
+def phone(phone_factory):
+    return phone_factory()
+
+
+@pytest.fixture
+def user_with_phone(user, phone):
+    from allauth.account.adapter import get_adapter
+
+    get_adapter().set_phone(user, phone, True)
+    return user

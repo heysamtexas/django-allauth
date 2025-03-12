@@ -1,8 +1,321 @@
-64.1.0 (unreleased)
+65.5.0 (unreleased)
 *******************
+
+Note worthy changes
+-------------------
+
+- Added support for phone (SMS) authentication.
+
+- Added support for resetting passwords by code, instead of a link
+  (``ACCOUNT_PASSWORD_RESET_BY_CODE_ENABLED``).
+
+- Simplified signup form configuration. The following settings all controlled
+  signup form: ``ACCOUNT_EMAIL_REQUIRED``, ``ACCOUNT_USERNAME_REQUIRED``,
+  ``ACCOUNT_SIGNUP_EMAIL_ENTER_TWICE``, ``ACCOUNT_SIGNUP_PASSWORD_ENTER_TWICE``.
+  This setup had its issues. For example, when email was not required it was
+  still available as an optional field, whereas the username field disappeared
+  when not required. Also, for phone/SMS support, additional settings
+  would have been required.  The settings are now all deprecated, and replaced by one
+  new setting: ``ACCOUNT_SIGNUP_FIELDS``, which can be configured to
+  e.g. ``['username*', 'email', 'password1*', 'password2*']`` to indicate which
+  fields are present and required (``'*'``). This change is performed in a
+  backwards compatible manner.
+
+- Headless: if, while signing up using a third-party provider account, there is
+  insufficient information received from the provider to automatically complete
+  the signup process, an additional step is needed to complete the missing data
+  before the user is fully signed up and authenticated.  You can now perform a
+  ``GET`` request to ``/_allauth/{client}/v1/auth/provider/signup`` to obtain
+  information on the pending signup.
+
+- Headless: OpenID Connect providers now support token authentication.
+
+- The "Forgot your password?" help text can now be more easily customized by
+  providing your own ``"account/password_reset_help_text.html"`` template.
+
+- Removed inline scripts, so that it becomes possible to use a strong Content
+  Security Policy.
+
+- Headless: The OpenAPI specification now dynamically reflects the
+  ``ACCOUNT_SIGNUP_FIELDS`` configuration, as well as any custom fields you have
+  in ``ACCOUNT_SIGNUP_FORM_CLASS``.
+
+
+Fixes
+-----
+
+- Headless: In case you had multiple apps of the same provider configured,
+  you could run into a ``MultipleObjectsReturned``. Fixed.
+
+
+65.4.1 (2025-02-07)
+*******************
+
+Fixes
+-----
+
+- To make way for a future ``"phone"`` method, ``AUTHENTICATION_METHOD`` was
+  removed in favor of a new ``LOGIN_METHODS``. While this change was done in a
+  backwards compatible manner within allauth scope, other packages accessing
+  ``allauth.account.app_settings.AUTHENTICATION_METHOD`` would break. Fixed.
+
+
+65.4.0 (2025-02-06)
+*******************
+
+Note worthy changes
+-------------------
+
+- The setting ``ACCOUNT_AUTHENTICATION_METHOD: str`` (with values
+  ``"username"``, ``"username_email"``, ``"email"``) has been replaced by
+  ``ACCOUNT_LOGIN_METHODS: set[str]``. which is a set of values including
+  ``"username"`` or ``"email"``. This change is performed in a backwards
+  compatible manner.
+
+- Headless: when ``HEADLESS_SERVE_SPECIFICATION`` is set to ``True``, the API
+  specification will be served dynamically, over at
+  ``/_allauth/openapi.(yaml|json|html)``.  The
+  ``HEADLESS_SPECIFICATION_TEMPLATE_NAME`` can be configured to choose between
+  Redoc (``"headless/spec/redoc_cdn.html"``) and Swagger (
+  (``"headless/spec/swagger_cdn.html"``).
+
+- Headless: added a new setting, ``HEADLESS_CLIENTS`` which you can use to limit
+  the types of API clients (app/browser).
+
+- Headless: expanded the React SPA example to showcase integration with
+  Django Ninja as well as Django REST framework.
+
+- Headless: added out of the box support for being able to use the headless
+  session tokens with Django Ninja and Django REST framework.
+
+
+65.3.1 (2024-12-25)
+*******************
+
+Fixes
+-----
+
+- Headless: When using email verification by code, you could incorrectly
+  encounter a 409 when attempting to add a new email address while logged in.
+
+- Headless: In contrast to the headed version, it was possible to remove the
+  last 3rd party account from a user that has no usable password. Fixed.
+
+- Headless: The setting ``ACCOUNT_LOGIN_ON_EMAIL_CONFIRMATION`` was not respected,
+  and always assumed to be ``True``.
+
+
+65.3.0 (2024-11-30)
+*******************
+
+Note worthy changes
+-------------------
+
+- Added support for TOTP code tolerance (see ``MFA_TOTP_TOLERANCE``).
+
+
+Security notice
+---------------
+
+- Authentication by email/password was vulnerable to account enumeration by
+  means of a timing attack. Thanks to Julie Rymer for the report and the patch.
+
+
+65.2.0 (2024-11-08)
+*******************
+
+Note worthy changes
+-------------------
+
+- OIDC: You can now configure whether or not PKCE is enabled per app by
+  including ``"oauth_pkce_enabled": True`` in the app settings.
+
+- The OpenStreetMap provider is deprecated. You can set it up as an OpenID Connect provider instead.
+
+
+Fixes
+-----
+
+- A ``NoReverseMatch`` could occur when using ``ACCOUNT_LOGIN_BY_CODE_REQUIRED =
+  True`` while ``ACCOUNT_LOGIN_BY_CODE_ENABLED = False``, fixed.
+
+- The ``PasswordResetDoneView`` did not behave correctly when using Django's
+  ``LoginRequiredMiddleware``, as it was not properly marked as
+  ``@login_not_required``.
+
+- When verifying an email address by code, the success URL was hardcoded to the
+  email management view, instead of calling the
+  ``get_email_verification_redirect_url()`` adapter method.
+
+
+Security notice
+---------------
+
+- Headless: ``settings.ACCOUNT_EMAIL_VERIFICATION_BY_CODE_MAX_ATTEMPTS`` was not
+  enforced, fixed.  Note that the related verification endpoint will return a
+  409 in case the maximum limit is exceeded, as at that point the pending email
+  verification stage is aborted.
+
+
+65.1.0 (2024-10-23)
+*******************
+
+Note worthy changes
+-------------------
+
+- OAuth2/OIDC: When setting up multiple apps for the same provider, you can now
+  configure a different scope per app by including ``"scope": [...]`` in the app
+  settings.
+
+- Facebook login: Facebook `Limited Login
+  <https://developers.facebook.com/docs/facebook-login/limited-login>`_ is now
+  supported via the Headless API. When you have a Limited Login JWT obtained
+  from the iOS SDK, you can use the Headless "provider token" flow to login with
+  it.
+
+
+Fixes
+-----
+
+- When using ``HEADLESS_ONLY = True`` together with
+  ``ACCOUNT_REAUTHENTICATION_REQUIRED = True``, you could run into a
+  ``NoReverseMatch`` when connecting a social acount. Fixed.
+
+- In headless mode, submitting a login code when the login flow expired resulted
+  in a 500. Fixed -- it now returns a 409.
+
+
+65.0.2 (2024-09-27)
+*******************
+
+Fixes
+-----
+
+- A regression occurred in the newly introduced support using
+  ``LoginRequiredMiddleware``, fixed.
+
+- For email verification by link, it is not an issue if the user runs into rate
+  limits. The reason is that the link is session independent. Therefore, if the
+  user hits rate limits, we can just silently skip sending additional
+  verification emails, as the previous emails that were already sent still
+  contain valid links. This is different from email verification by code.  Here,
+  the session contains a specific code, meaning, silently skipping new
+  verification emails is not an option, and we must block the login instead. The
+  latter was missing, fixed.
+
+
+65.0.1 (2024-09-23)
+*******************
+
+Fixes
+-----
+
+- When email verification by code was used, adding additional email addresses
+  over at the email management page fired the ``email_added`` signal prematurely
+  as the email address instance was still unsaved. Fixed.
+
+- The newly introduced logic to redirect to pending login stages has now been
+  integrated in the ``RedirectAuthenticatedUserMixin`` so that the existing
+  behavior of invoking ``get_authenticated_redirect_url()`` when already
+  authenticated is respected.
+
+
+65.0.0 (2024-09-22)
+*******************
+
+Note worthy changes
+-------------------
+
+- Added transparent support for Django's ``LoginRequiredMiddleware`` (new since
+  Django 5.1).
+
+- The ``usersessions`` app now emits signals when either the IP address or user
+  agent for a session changes.
+
+- Added support for signup using a passkey. See
+  ``settings.MFA_PASSKEY_SIGNUP_ENABLED``.
+
+
+Backwards incompatible changes
+------------------------------
+
+- When the user is partially logged in (e.g. pending 2FA, or login by code),
+  accessing the login/signup page now redirects to the pending login stage. This
+  is similar to the redirect that was already in place when the user was fully
+  authenticated while accessing the login/signup page. As a result, cancelling
+  (logging out of) the pending stage requires an actual logout POST instead of
+  merely linking back to e.g. the login page. The builtin templates handle this
+  change transparently, but if you copied any of the templates involving the
+  login stages you will have to adjust the cancel link into a logout POST.
+
+
+64.2.1 (2024-09-05)
+*******************
+
+Fixes
+-----
+
+- Verifying the email address by clicking on the link would no longer log you in, even
+  in case of ``ACCOUNT_LOGIN_ON_EMAIL_CONFIRMATION = True``.
+
+
+Security notice
+---------------
+
+- It was already the case that you could not enable TOTP 2FA if your account had
+  unverified email addresses. This is necessary to stop a user from claiming
+  email addresses and locking other users out. This safety check is now added to
+  WebAuthn security keys as well.
+
+- In case a user signs in into an account using social account email
+  authentication (``SOCIALACCOUNT_EMAIL_AUTHENTICATION``) and the email used is
+  not verified, the password of the account is now wiped (made unusable) to
+  prevent the person that created the account (without verifying it) from
+  signing in.
+
+
+64.2.0 (2024-08-30)
+*******************
+
+Note worthy changes
+-------------------
+
+- Verifying email addresses by means of a code (instead of a link) is now supported.
+  See ``settings.ACCOUNT_EMAIL_VERIFICATION_BY_CODE_ENABLED``.
+
+- Added support for requiring logging in by code, so that every user logging in
+  is required to input a login confirmation code sent by email. See
+  ``settings.ACCOUNT_LOGIN_BY_CODE_REQUIRED``.
+
+
+Security notice
+---------------
+
+- In case an ID token is used for authentication, the JTI is now respected to
+  prevent the possibility of replays instead of solely relying on the expiration
+  time.
+
+
+64.1.0 (2024-08-15)
+*******************
+
+Note worthy changes
+-------------------
 
 - Headless: When trying to login while a user is already logged in, you now get
   a 409.
+
+- Limited the maximum allowed time for a login to go through the various login
+  stages. This limits, for example, the time span that the 2FA stage remains
+  available. See ``settings.ACCOUNT_LOGIN_TIMEOUT``.
+
+
+Security notice
+---------------
+
+- Headless: When a user was not fully logged in, for example, because (s)he was
+  in the process of completing the 2FA process, calling logout would not wipe
+  the session containing the partially logged in user.
 
 
 64.0.0 (2024-07-31)

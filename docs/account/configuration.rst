@@ -14,11 +14,6 @@ Available settings:
   By changing this setting to ``False``, logged in users will not be redirected when
   they access login/signup pages.
 
-``ACCOUNT_AUTHENTICATION_METHOD`` (default: ``"username"``, alternatives: ``"email"`` or ``"username_email"``)
-  Specifies the login method to use -- whether the user logs in by
-  entering their username, email address, or either one of both.
-  Setting this to ``"email"`` requires ``ACCOUNT_EMAIL_REQUIRED=True``
-
 ``ACCOUNT_CHANGE_EMAIL`` (default: ``False``)
   When disabled (``False``), users can add one or more email addresses (up to a
   maximum of ``ACCOUNT_MAX_EMAIL_ADDRESSES``) to their account and freely manage
@@ -58,9 +53,6 @@ Available settings:
   was changed", including information on user agent / IP address from where the
   change originated, will be emailed.
 
-``ACCOUNT_EMAIL_REQUIRED`` (default: ``False``)
-  The user is required to hand over an email address when signing up.
-
 ``ACCOUNT_EMAIL_VERIFICATION`` (default: ``"optional"``)
   Determines the email verification method during signup -- choose
   one of ``"mandatory"``, ``"optional"``, or ``"none"``.
@@ -72,6 +64,18 @@ Available settings:
   with an unverified email address. In case of ``"optional"``, the email
   verification mail is still sent, whereas in case of "none" no email
   verification mails are sent.
+
+``ACCOUNT_EMAIL_VERIFICATION_BY_CODE_ENABLED`` (default: ``False``)
+  Controls whether email verification is performed by means of following a link
+  in the email (``False``), or by entering a code (``True``).
+
+``ACCOUNT_EMAIL_VERIFICATION_BY_CODE_MAX_ATTEMPTS`` (default: ``3``)
+  This setting controls the maximum number of attempts the user has at inputting
+  a valid code.
+
+``ACCOUNT_EMAIL_VERIFICATION_BY_CODE_TIMEOUT`` (default: ``900``)
+  The code that is emailed has a limited life span. It expires this many seconds after
+  which it was sent.
 
 ``ACCOUNT_EMAIL_SUBJECT_PREFIX`` (default: ``"[Site] "``)
   Subject-line prefix to use for email messages sent. By default, the
@@ -134,9 +138,20 @@ Available settings:
   This setting controls the maximum number of attempts the user has at inputting
   a valid code.
 
+``ACCOUNT_LOGIN_BY_CODE_REQUIRED`` (default: ``False``)
+  When enabled (in case of ``True``), every user logging in is required to input
+  a login confirmation code sent by email.  Alternatively, you can specify a set
+  of authentication methods (``"password"``, ``"mfa"``, or ``"socialaccount"``)
+  for which login codes are required.
+
 ``ACCOUNT_LOGIN_BY_CODE_TIMEOUT`` (default: ``180``)
   The code that is emailed has a limited life span. It expires this many seconds after
   which it was sent.
+
+``ACCOUNT_LOGIN_METHODS`` (default: ``{"username"}``, options: ``"email"`` or ``"username"``)
+  Specifies the login method to use -- whether the user logs in by entering
+  their username, email address, or either one of both.  Setting this to include
+  ``"email"`` requires ``ACCOUNT_EMAIL_REQUIRED=True``
 
 ``ACCOUNT_LOGIN_ON_EMAIL_CONFIRMATION`` (default: ``False``)
   The default behavior is not log users in and to redirect them to
@@ -146,6 +161,20 @@ Available settings:
   they confirm their email address. Note however that this only works when
   confirming the email address **immediately after signing up**, assuming users
   didn't close their browser or used some sort of private browsing mode.
+
+  Note that this setting only affects email verification by link. It has no affect in
+  case you turn on code based verification
+  (``ACCOUNT_EMAIL_VERIFICATION_BY_CODE_ENABLED``).
+
+``ACCOUNT_LOGIN_ON_PASSWORD_RESET`` (default: ``False``)
+  By changing this setting to ``True``, users will automatically be logged in
+  once they have reset their password. By default they are redirected to the
+  password reset done page.
+
+``ACCOUNT_LOGIN_TIMEOUT`` (default: ``900``)
+  The maximum allowed time (in seconds) for a login to go through the
+  various login stages. This limits, for example, the time span that the
+  2FA stage remains available.
 
 ``ACCOUNT_LOGOUT_ON_GET`` (default: ``False``)
   Determines whether or not the user is automatically logged out by a
@@ -159,17 +188,24 @@ Available settings:
   changing or setting their password. See documentation for
   `Django's session invalidation on password change <https://docs.djangoproject.com/en/stable/topics/auth/default/#session-invalidation-on-password-change>`_.
 
-``ACCOUNT_LOGIN_ON_PASSWORD_RESET`` (default: ``False``)
-  By changing this setting to ``True``, users will automatically be logged in
-  once they have reset their password. By default they are redirected to the
-  password reset done page.
-
 ``ACCOUNT_LOGOUT_REDIRECT_URL`` (default: ``settings.LOGOUT_REDIRECT_URL or "/"``)
   The URL (or URL name) to return to after the user logs out. Defaults to
   Django's ``LOGOUT_REDIRECT_URL``, unless that is empty, then ``"/"`` is used.
 
 ``ACCOUNT_PASSWORD_INPUT_RENDER_VALUE`` (default: ``False``)
   ``render_value`` parameter as passed to ``PasswordInput`` fields.
+
+``ACCOUNT_PASSWORD_RESET_BY_CODE_ENABLED`` (default: ``False``)
+  Controls whether password reset is performed by means of following a link
+  in the email (``False``), or by entering a code (``True``).
+
+``ACCOUNT_PASSWORD_RESET_BY_CODE_MAX_ATTEMPTS`` (default: ``3``)
+  This setting controls the maximum number of attempts the user has at inputting
+  a valid code.
+
+``ACCOUNT_PASSWORD_RESET_BY_CODE_TIMEOUT`` (default: ``180``)
+  The code that is emailed has a limited life span. It expires this many seconds after
+  which it was sent.
 
 ``ACCOUNT_PASSWORD_RESET_TOKEN_GENERATOR`` (default: ``"allauth.account.forms.EmailAwarePasswordResetTokenGenerator"``)
   A string pointing to a custom token generator
@@ -222,16 +258,22 @@ Available settings:
   ("Remember me?"), ``False`` to not remember, and ``True`` to always
   remember.
 
-``ACCOUNT_SIGNUP_EMAIL_ENTER_TWICE`` (default: ``False``)
-  When signing up, let the user type in their email address twice to avoid
-  typo's.
+``ACCOUNT_SIGNUP_FIELDS`` (default: ``['username*', 'email', 'password1*', 'password2*']``)
+  The list of fields to complete in the signup form: ``username``, ``email``,
+  ``phone``, ``password1``, ``password2``.. Fields marked with an asterisk
+  (e.g. ``'username*'``) are required.  To let the user type in their email
+  address twice to avoid typos, you can add ``'email2'``.  The field
+  ``'password2'`` can be used let the user type in their password twice to avoid
+  typos.
 
 ``ACCOUNT_SIGNUP_FORM_CLASS`` (default: ``None``)
-  A string pointing to a custom form class
-  (e.g. ``'myapp.forms.SignupForm'``) that is used during signup to ask
-  the user for additional input (e.g. newsletter signup, birth
-  date). This class should implement a ``def signup(self, request, user)``
-  method, where user represents the newly signed up user.
+  A string pointing to a custom form class (e.g. ``'myapp.forms.SignupForm'``)
+  that is used during signup to ask the user for additional input (e.g. a
+  newsletter signup checkbox, or birth date). This class should derive from just
+  ``forms.Form`` and only list the additional fields you need. It must implement
+  a ``def signup(self, request, user)`` method, which is called during the
+  signup process. This method allows you to handle and store the submitted data
+  as needed.
 
 ``ACCOUNT_SIGNUP_FORM_HONEYPOT_FIELD`` (default: ``None``)
   A string value that will be used as the HTML 'name' property
@@ -244,9 +286,6 @@ Available settings:
   always successful for sophisticated bots so this should be
   used as one layer in a suite of spam detection tools if your
   site is having trouble with spam.
-
-``ACCOUNT_SIGNUP_PASSWORD_ENTER_TWICE`` (default: ``True``)
-  When signing up, let the user type in their password twice to avoid typos.
 
 ``ACCOUNT_SIGNUP_REDIRECT_URL`` (default: ``settings.LOGIN_REDIRECT_URL``)
   The URL (or URL name) to redirect to directly after signing up. Note that
@@ -283,12 +322,6 @@ Available settings:
 
 ``ACCOUNT_USERNAME_MIN_LENGTH`` (default: ``1``)
   An integer specifying the minimum allowed length of a username.
-
-``ACCOUNT_USERNAME_REQUIRED`` (default: ``True``)
-  The user is required to enter a username when signing up. Note that
-  the user will be asked to do so even if
-  ``ACCOUNT_AUTHENTICATION_METHOD`` is set to ``email``. Set to ``False``
-  when you do not wish to prompt the user to enter a username.
 
 ``ACCOUNT_USERNAME_VALIDATORS`` (default: ``None``)
   A path

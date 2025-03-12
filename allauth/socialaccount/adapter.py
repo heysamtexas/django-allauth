@@ -13,12 +13,11 @@ from django.utils.translation import gettext_lazy as _
 from allauth.account.adapter import get_adapter as get_account_adapter
 from allauth.account.utils import user_email, user_field, user_username
 from allauth.core.internal.adapter import BaseAdapter
-from allauth.utils import (
+from allauth.core.internal.modelkit import (
     deserialize_instance,
-    import_attribute,
     serialize_instance,
-    valid_email_or_none,
 )
+from allauth.utils import import_attribute, valid_email_or_none
 
 from . import app_settings
 
@@ -220,7 +219,7 @@ class DefaultSocialAccountAdapter(BaseAdapter):
                 raise ImproperlyConfigured(f"unknown provider: {app.provider}")
             return provider_class(request, app=app)
         elif provider_class:
-            assert not provider_class.uses_apps
+            assert not provider_class.uses_apps  # nosec
             return provider_class(request, app=None)
         else:
             raise ImproperlyConfigured(f"unknown provider: {app.provider}")
@@ -351,7 +350,7 @@ class DefaultSocialAccountAdapter(BaseAdapter):
         (``SOCIALACCOUNT_PROVIDERS``).
         """
         ret = None
-        provider = login.account.get_provider()
+        provider = login.provider
         if provider.app:
             ret = provider.app.settings.get("email_authentication")
         if ret is None:

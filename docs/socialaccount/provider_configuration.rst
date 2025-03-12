@@ -50,11 +50,20 @@ configuration::
                 {
                     "client_id": "123",
                     "secret": "456",
-                    "key": ""
+                    "key": "",
+                    "settings": {
+                        # You can fine tune these settings per app:
+                        "scope": [
+                            "profile",
+                            "email",
+                        ],
+                        "auth_params": {
+                            "access_type": "online",
+                        },
+                    },
                 },
             ],
-            # These are provider-specific settings that can only be
-            # listed here:
+            # The following provider-specific settings will be used for all apps:
             "SCOPE": [
                 "profile",
                 "email",

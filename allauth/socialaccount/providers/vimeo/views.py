@@ -1,5 +1,3 @@
-import json
-
 from allauth.socialaccount.providers.oauth.client import OAuth
 from allauth.socialaccount.providers.oauth.views import (
     OAuthAdapter,
@@ -13,14 +11,14 @@ class VimeoAPI(OAuth):
 
     def get_user_info(self):
         url = self.url
-        data = json.loads(self.query(url, params=dict(format="json")))
+        data = self.query(url, params=dict(format="json")).json()
         return data["person"]
 
 
 class VimeoOAuthAdapter(OAuthAdapter):
     provider_id = "vimeo"
-    request_token_url = "https://vimeo.com/oauth/request_token"
-    access_token_url = "https://vimeo.com/oauth/access_token"
+    request_token_url = "https://vimeo.com/oauth/request_token"  # nosec
+    access_token_url = "https://vimeo.com/oauth/access_token"  # nosec
     authorize_url = "https://vimeo.com/oauth/authorize"
 
     def complete_login(self, request, app, token, response):

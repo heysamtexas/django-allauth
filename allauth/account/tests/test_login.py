@@ -4,20 +4,22 @@ from unittest.mock import ANY, patch
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core import mail
+from django.test import TestCase
 from django.test.utils import override_settings
 from django.urls import NoReverseMatch, reverse
+
+from pytest_django.asserts import assertTemplateUsed
 
 from allauth.account import app_settings
 from allauth.account.authentication import AUTHENTICATION_METHODS_SESSION_KEY
 from allauth.account.forms import LoginForm
 from allauth.account.models import EmailAddress
-from allauth.tests import TestCase
 
 
 @override_settings(
     ACCOUNT_DEFAULT_HTTP_PROTOCOL="https",
     ACCOUNT_EMAIL_VERIFICATION=app_settings.EmailVerificationMethod.MANDATORY,
-    ACCOUNT_AUTHENTICATION_METHOD=app_settings.AuthenticationMethod.USERNAME,
+    ACCOUNT_LOGIN_METHODS={app_settings.AuthenticationMethod.USERNAME},
     ACCOUNT_SIGNUP_FORM_CLASS=None,
     ACCOUNT_EMAIL_SUBJECT_PREFIX=None,
     LOGIN_REDIRECT_URL="/accounts/profile/",
@@ -27,7 +29,10 @@ from allauth.tests import TestCase
 )
 class LoginTests(TestCase):
     @override_settings(
-        ACCOUNT_AUTHENTICATION_METHOD=app_settings.AuthenticationMethod.USERNAME_EMAIL
+        ACCOUNT_LOGIN_METHODS={
+            app_settings.LoginMethod.USERNAME,
+            app_settings.LoginMethod.EMAIL,
+        }
     )
     def test_username_containing_at(self):
         user = get_user_model().objects.create(username="@raymond.penners")
@@ -150,7 +155,7 @@ class LoginTests(TestCase):
             )
 
     @override_settings(
-        ACCOUNT_AUTHENTICATION_METHOD=app_settings.AuthenticationMethod.EMAIL,
+        ACCOUNT_LOGIN_METHODS={app_settings.LoginMethod.EMAIL},
         ACCOUNT_EMAIL_VERIFICATION=app_settings.EmailVerificationMethod.MANDATORY,
         ACCOUNT_LOGIN_ATTEMPTS_LIMIT=1,
         CACHES={
@@ -228,7 +233,7 @@ class LoginTests(TestCase):
         )
 
     @override_settings(
-        ACCOUNT_AUTHENTICATION_METHOD=app_settings.AuthenticationMethod.EMAIL,
+        ACCOUNT_LOGIN_METHODS={app_settings.LoginMethod.EMAIL},
         ACCOUNT_EMAIL_VERIFICATION=app_settings.EmailVerificationMethod.MANDATORY,
         ACCOUNT_LOGIN_ATTEMPTS_LIMIT=1,
     )
@@ -335,3 +340,9 @@ def test_login_while_authenticated(settings, client, user_factory):
     resp = client.post(reverse("account_login"), {"login": "jane", "password": "doe"})
     assert resp.status_code == 302
     assert resp["location"] == redirect_url
+
+
+def test_login_page(client, db):
+    resp = client.get(reverse("account_login"))
+    assert resp.status_code == 200
+    assertTemplateUsed(resp, "account/login.html")

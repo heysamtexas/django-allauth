@@ -1,19 +1,18 @@
 import unicodedata
 from collections import OrderedDict
-from typing import Optional
+from typing import List, Optional
 
 from django.conf import settings
-from django.contrib import messages
 from django.contrib.auth import REDIRECT_FIELD_NAME, get_user_model
-from django.core.exceptions import FieldDoesNotExist
 from django.db import models
 from django.db.models import Q
 from django.utils.encoding import force_str
 from django.utils.http import base36_to_int, int_to_base36
 
-from allauth.account import app_settings, signals
+from allauth.account import app_settings
 from allauth.account.adapter import get_adapter
 from allauth.account.internal import flows
+from allauth.account.internal.userkit import user_field
 from allauth.account.models import Login
 from allauth.core.internal import httpkit
 from allauth.utils import (
@@ -83,33 +82,6 @@ def user_display(user) -> str:
     return _user_display_callable(user)
 
 
-def user_field(user, field, *args, commit=False):
-    """
-    Gets or sets (optional) user model fields. No-op if fields do not exist.
-    """
-    if not field:
-        return
-    User = get_user_model()
-    try:
-        field_meta = User._meta.get_field(field)
-        max_length = field_meta.max_length
-    except FieldDoesNotExist:
-        if not hasattr(user, field):
-            return
-        max_length = None
-    if args:
-        # Setter
-        v = args[0]
-        if v:
-            v = v[0:max_length]
-        setattr(user, field, v)
-        if commit:
-            user.save(update_fields=[field])
-    else:
-        # Getter
-        return getattr(user, field)
-
-
 def user_username(user, *args, commit=False):
     if args and not app_settings.PRESERVE_USERNAME_CASING and args[0]:
         args = [args[0].lower()]
@@ -161,41 +133,11 @@ def perform_login(
     return flows.login.perform_login(request, login)
 
 
-def resume_login(request, login):
-    return flows.login.resume_login(request, login)
-
-
-def unstash_login(request, peek=False):
-    login = None
-    if peek:
-        data = request.session.get(flows.login.LOGIN_SESSION_KEY)
-    else:
-        data = request.session.pop(flows.login.LOGIN_SESSION_KEY, None)
-    if isinstance(data, dict):
-        try:
-            login = Login.deserialize(data)
-            request._account_login_accessed = True
-        except ValueError:
-            pass
-    return login
-
-
-def stash_login(request, login):
-    request.session[flows.login.LOGIN_SESSION_KEY] = login.serialize()
-    request._account_login_accessed = True
-
-
 def complete_signup(request, user, email_verification, success_url, signal_kwargs=None):
-    if signal_kwargs is None:
-        signal_kwargs = {}
-    signals.user_signed_up.send(
-        sender=user.__class__, request=request, user=user, **signal_kwargs
-    )
-    return perform_login(
+    return flows.signup.complete_signup(
         request,
-        user,
+        user=user,
         email_verification=email_verification,
-        signup=True,
         redirect_url=success_url,
         signal_kwargs=signal_kwargs,
     )
@@ -282,7 +224,7 @@ def setup_user_email(request, user, addresses):
     """
     from .models import EmailAddress
 
-    assert not EmailAddress.objects.filter(user=user).exists()
+    assert not EmailAddress.objects.filter(user=user).exists()  # nosec
     priority_addresses = []
     # Is there a stashed email?
     adapter = get_adapter()
@@ -311,69 +253,10 @@ def setup_user_email(request, user, addresses):
     return primary
 
 
-def send_email_confirmation(request, user, signup=False, email=None):
-    """
-    Email verification mails are sent:
-    a) Explicitly: when a user signs up
-    b) Implicitly: when a user attempts to log in using an unverified
-    email while EMAIL_VERIFICATION is mandatory.
-
-    Especially in case of b), we want to limit the number of mails
-    sent (consider a user retrying a few times), which is why there is
-    a cooldown period before sending a new mail. This cooldown period
-    can be configured in ACCOUNT_EMAIL_CONFIRMATION_COOLDOWN setting.
-
-    TODO: This code is doing way too much. Looking up EmailAddress, creating
-    if not present, etc. To be refactored.
-    """
-    from .models import EmailAddress
-
-    adapter = get_adapter()
-    sent = False
-    email_address = None
-    if not email:
-        email = user_email(user)
-    if not email:
-        email_address = (
-            EmailAddress.objects.filter(user=user).order_by("verified", "pk").first()
-        )
-        if email_address:
-            email = email_address.email
-
-    if email:
-        if email_address is None:
-            try:
-                email_address = EmailAddress.objects.get_for_user(user, email)
-            except EmailAddress.DoesNotExist:
-                pass
-        if email_address is not None:
-            if not email_address.verified:
-                send_email = adapter.should_send_confirmation_mail(
-                    request, email_address, signup
-                )
-                if send_email:
-                    email_address.send_confirmation(request, signup=signup)
-                    sent = True
-            else:
-                send_email = False
-        else:
-            send_email = True
-            email_address = EmailAddress.objects.add_email(
-                request, user, email, signup=signup, confirm=True
-            )
-            sent = True
-            assert email_address
-        # At this point, if we were supposed to send an email we have sent it.
-        if send_email:
-            adapter.add_message(
-                request,
-                messages.INFO,
-                "account/messages/email_confirmation_sent.txt",
-                {"email": email, "login": not signup, "signup": signup},
-            )
-    if signup:
-        adapter.stash_user(request, user_pk_to_url_str(user))
-    return sent
+def send_email_confirmation(request, user, signup=False, email=None) -> bool:
+    return flows.email_verification.send_verification_email(
+        request, user, signup=signup, email=email
+    )
 
 
 def sync_user_email_addresses(user):
@@ -416,7 +299,7 @@ def filter_users_by_username(*username):
 
 def filter_users_by_email(
     email: str, is_active: Optional[bool] = None, prefer_verified: bool = False
-):
+) -> List:
     """Return list of users by email address
 
     Typically one, at most just a few in length.  First we look through
@@ -447,7 +330,7 @@ def filter_users_by_email(
     if app_settings.USER_MODEL_EMAIL_FIELD and not is_verified:
         q_dict = {app_settings.USER_MODEL_EMAIL_FIELD: email}
         user_qs = User.objects.filter(**q_dict)
-        for user in user_qs.iterator():
+        for user in user_qs.iterator(2000):
             user_email = getattr(user, app_settings.USER_MODEL_EMAIL_FIELD)
             if _unicode_ci_compare(user_email, email):
                 users.append(user)
@@ -494,60 +377,3 @@ def url_str_to_user_pk(pk_str):
     else:
         pk = pk_field.to_python(pk_str)
     return pk
-
-
-def assess_unique_email(email) -> Optional[bool]:
-    """
-    True -- email is unique
-    False -- email is already in use
-    None -- email is in use, but we should hide that using email verification.
-    """
-    if not filter_users_by_email(email):
-        # All good.
-        return True
-    elif not app_settings.PREVENT_ENUMERATION:
-        # Fail right away.
-        return False
-    elif (
-        app_settings.EMAIL_VERIFICATION
-        == app_settings.EmailVerificationMethod.MANDATORY
-    ):
-        # In case of mandatory verification and enumeration prevention,
-        # we can avoid creating a new account with the same (unverified)
-        # email address, because we are going to send an email anyway.
-        assert app_settings.PREVENT_ENUMERATION
-        return None
-    elif app_settings.PREVENT_ENUMERATION == "strict":
-        # We're going to be strict on enumeration prevention, and allow for
-        # this email address to pass even though it already exists. In this
-        # scenario, you can signup multiple times using the same email
-        # address resulting in multiple accounts with an unverified email.
-        return True
-    else:
-        assert app_settings.PREVENT_ENUMERATION is True
-        # Conflict. We're supposed to prevent enumeration, but we can't
-        # because that means letting the user in, while emails are required
-        # to be unique. In this case, uniqueness takes precedence over
-        # enumeration prevention.
-        return False
-
-
-def emit_email_changed(request, from_email_address, to_email_address) -> None:
-    user = to_email_address.user
-    signals.email_changed.send(
-        sender=user.__class__,
-        request=request,
-        user=user,
-        from_email_address=from_email_address,
-        to_email_address=to_email_address,
-    )
-    if from_email_address:
-        get_adapter().send_notification_mail(
-            "account/email/email_changed",
-            user,
-            context={
-                "from_email": from_email_address.email,
-                "to_email": to_email_address.email,
-            },
-            email=from_email_address.email,
-        )

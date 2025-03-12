@@ -15,7 +15,10 @@ from allauth.headless.socialaccount.inputs import (
     SignupInput,
 )
 from allauth.headless.socialaccount.internal import complete_token_login
-from allauth.headless.socialaccount.response import SocialAccountsResponse
+from allauth.headless.socialaccount.response import (
+    SocialAccountsResponse,
+    SocialLoginResponse,
+)
 from allauth.socialaccount.adapter import (
     get_adapter as get_socialaccount_adapter,
 )
@@ -37,9 +40,14 @@ class ProviderSignupView(APIView):
             return ForbiddenResponse(request)
         return super().handle(request, *args, **kwargs)
 
+    def get(self, request, *args, **kwargs):
+        return SocialLoginResponse(request, self.sociallogin)
+
     def post(self, request, *args, **kwargs):
-        flows.signup.signup_by_form(self.request, self.sociallogin, self.input)
-        return AuthenticationResponse(request)
+        response = flows.signup.signup_by_form(
+            self.request, self.sociallogin, self.input
+        )
+        return AuthenticationResponse.from_response(request, response)
 
     def get_input_kwargs(self):
         return {"sociallogin": self.sociallogin}
@@ -93,10 +101,11 @@ class ProviderTokenView(APIView):
 
     def post(self, request, *args, **kwargs):
         sociallogin = self.input.cleaned_data["sociallogin"]
+        response = None
         try:
-            complete_token_login(request, sociallogin)
+            response = complete_token_login(request, sociallogin)
         except ValidationError as e:
             return ErrorResponse(self.request, exception=e)
         except SignupClosedException:
             return ForbiddenResponse(self.request)
-        return AuthenticationResponse(self.request)
+        return AuthenticationResponse.from_response(self.request, response)

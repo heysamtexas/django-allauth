@@ -5,6 +5,7 @@ from django.forms.fields import Field
 from allauth.account.models import EmailAddress
 from allauth.account.utils import user_display, user_username
 from allauth.core.internal.adapter import BaseAdapter
+from allauth.core.internal.httpkit import default_get_frontend_url
 from allauth.headless import app_settings
 from allauth.utils import import_attribute
 
@@ -21,12 +22,12 @@ class DefaultHeadlessAdapter(BaseAdapter):
         # showing up in a UI.
         "account_not_found": "Unknown account.",
         "client_id_required": "`client_id` required.",
-        "email_or_username": "Pass only one of email or username, not both.",
         "invalid_token": "Invalid token.",
         "token_authentication_not_supported": "Provider does not support token authentication.",
         "token_required": "`id_token` and/or `access_token` required.",
         "required": Field.default_error_messages["required"],
         "unknown_email": "Unknown email address.",
+        "unknown_provider": "Unknown provider.",
         "invalid_url": "Invalid URL.",
     }
 
@@ -37,17 +38,22 @@ class DefaultHeadlessAdapter(BaseAdapter):
         verification).
         """
         ret = {
-            "id": user.pk,
             "display": user_display(user),
             "has_usable_password": user.has_usable_password(),
         }
-        email = EmailAddress.objects.get_primary_email(user)
-        if email:
-            ret["email"] = email
+        if user.pk:
+            ret["id"] = user.pk
+            email = EmailAddress.objects.get_primary_email(user)
+            if email:
+                ret["email"] = email
         username = user_username(user)
         if username:
             ret["username"] = username
         return ret
+
+    def get_frontend_url(self, urlname, **kwargs):
+        """Return the frontend URL for the given URL name."""
+        return default_get_frontend_url(self.request, urlname, **kwargs)
 
 
 def get_adapter():

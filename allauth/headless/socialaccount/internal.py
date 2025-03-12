@@ -4,6 +4,7 @@ from django.http import HttpResponseRedirect
 from allauth import app_settings as allauth_settings
 from allauth.core.exceptions import (
     ImmediateHttpResponse,
+    ReauthenticationRequired,
     SignupClosedException,
 )
 from allauth.core.internal import httpkit
@@ -51,7 +52,7 @@ def on_authentication_error(
 
 
 def complete_token_login(request, sociallogin):
-    flows.login.complete_login(request, sociallogin, raises=True)
+    return flows.login.complete_login(request, sociallogin, raises=True)
 
 
 def complete_login(request, sociallogin):
@@ -61,6 +62,8 @@ def complete_login(request, sociallogin):
     error = None
     try:
         flows.login.complete_login(request, sociallogin, raises=True)
+    except ReauthenticationRequired:
+        error = "reauthentication_required"
     except SignupClosedException:
         error = "signup_closed"
     except PermissionDenied:

@@ -1,10 +1,12 @@
 import hashlib
 import time
 from collections import namedtuple
+from typing import Optional
 
 from django.conf import settings
 from django.core.cache import cache
 from django.core.exceptions import ImproperlyConfigured
+from django.http import HttpResponse
 from django.shortcuts import render
 
 from allauth import app_settings
@@ -89,7 +91,7 @@ def clear(request, *, action, key=None, user=None):
         cache.delete(cache_key)
 
 
-def consume(request, *, action, key=None, user=None):
+def consume(request, *, action, key=None, user=None, dry_run: bool = False):
     from allauth.account import app_settings
 
     if not request or request.method == "GET":
@@ -101,19 +103,21 @@ def consume(request, *, action, key=None, user=None):
 
     allowed = True
     for rate in rates:
-        if not _consume_rate(request, action=action, rate=rate, key=key, user=user):
+        if not _consume_rate(
+            request, action=action, rate=rate, key=key, user=user, dry_run=dry_run
+        ):
             allowed = False
     return allowed
 
 
-def _consume_rate(request, *, action, rate, key=None, user=None):
+def _consume_rate(request, *, action, rate, key=None, user=None, dry_run: bool = False):
     cache_key = _cache_key(request, action=action, rate=rate, key=key, user=user)
     history = cache.get(cache_key, [])
     now = time.time()
     while history and history[-1] <= now - rate.duration:
         history.pop()
     allowed = len(history) < rate.amount
-    if allowed:
+    if allowed and not dry_run:
         history.insert(0, now)
         cache.set(cache_key, history, rate.duration)
     return allowed
@@ -125,16 +129,21 @@ def _handler429(request):
     return render(request, "429." + app_settings.TEMPLATE_EXTENSION, status=429)
 
 
-def consume_or_429(request, *args, **kwargs):
+def respond_429(request) -> HttpResponse:
+    if app_settings.HEADLESS_ENABLED and hasattr(request.allauth, "headless"):
+        from allauth.headless.base.response import RateLimitResponse
+
+        return RateLimitResponse(request)
+
+    try:
+        handler429 = import_callable(settings.ROOT_URLCONF + ".handler429")
+        handler429 = import_callable(handler429)
+    except (ImportError, AttributeError):
+        handler429 = _handler429
+    return handler429(request)
+
+
+def consume_or_429(request, *args, **kwargs) -> Optional[HttpResponse]:
     if not consume(request, *args, **kwargs):
-        if app_settings.HEADLESS_ENABLED and hasattr(request.allauth, "headless"):
-            from allauth.headless.base.response import RateLimitResponse
-
-            return RateLimitResponse(request)
-
-        try:
-            handler429 = import_callable(settings.ROOT_URLCONF + ".handler429")
-            handler429 = import_callable(handler429)
-        except (ImportError, AttributeError):
-            handler429 = _handler429
-        return handler429(request)
+        return respond_429(request)
+    return None

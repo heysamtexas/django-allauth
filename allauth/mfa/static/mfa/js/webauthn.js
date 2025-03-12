@@ -1,5 +1,6 @@
 (function () {
   const allauth = window.allauth = window.allauth || {}
+  const webauthnJSON = window.webauthnJSON
 
   function dispatchError (exception) {
     const event = new CustomEvent('allauth.error', { detail: { tags: ['mfa', 'webauthn'], exception }, cancelable: true })
@@ -12,21 +13,40 @@
   async function createCredentials (credentials, passwordless) {
     credentials = JSON.parse(JSON.stringify(credentials))
     const sel = credentials.publicKey.authenticatorSelection
-    sel.residentKey = passwordless ? 'required' : 'discouraged'
-    sel.requireResidentKey = passwordless
-    sel.userVerification = passwordless ? 'required' : 'discouraged'
+    if (passwordless != null) {
+      sel.residentKey = passwordless ? 'required' : 'discouraged'
+      sel.requireResidentKey = passwordless
+      sel.userVerification = passwordless ? 'required' : 'discouraged'
+    }
     return await webauthnJSON.create(credentials)
+  }
+
+  function signupForm (o) {
+    const signupBtn = document.getElementById(o.ids.signup)
+    return addOrSignupForm(o, signupBtn, null)
   }
 
   function addForm (o) {
     const addBtn = document.getElementById(o.ids.add)
     const passwordlessCb = o.ids.passwordless ? document.getElementById(o.ids.passwordless) : null
+    const passwordlessFn = () => passwordlessCb ? passwordlessCb.checked : false
+    return addOrSignupForm(o, addBtn, passwordlessFn)
+  }
+
+  function getData (o) {
+    if (typeof o.ids.data !== 'undefined') {
+      return JSON.parse(document.getElementById(o.ids.data).textContent)
+    }
+    return o.data
+  }
+
+  function addOrSignupForm (o, actionBtn, passwordlessFn) {
     const credentialInput = document.getElementById(o.ids.credential)
     const form = credentialInput.closest('form')
-    addBtn.addEventListener('click', async function () {
-      const passwordless = passwordlessCb ? passwordlessCb.checked : false
+    actionBtn.addEventListener('click', async function () {
+      const passwordless = passwordlessFn ? passwordlessFn() : undefined
       try {
-        const credential = await createCredentials(o.data.creation_options, passwordless)
+        const credential = await createCredentials(getData(o).creation_options, passwordless)
         credentialInput.value = JSON.stringify(credential)
         form.submit()
       } catch (e) {
@@ -68,7 +88,7 @@
     authenticateBtn.addEventListener('click', async function (e) {
       e.preventDefault()
       try {
-        const credential = await webauthnJSON.get(o.data.request_options)
+        const credential = await webauthnJSON.get(getData(o).request_options)
         credentialInput.value = JSON.stringify(credential)
         form.submit()
       } catch (e) {
@@ -81,7 +101,8 @@
     forms: {
       addForm,
       authenticateForm,
-      loginForm
+      loginForm,
+      signupForm
     }
   }
 })()

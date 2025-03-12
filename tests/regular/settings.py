@@ -224,6 +224,8 @@ PASSWORD_HASHERS = [
 ]
 
 
+ACCOUNT_ADAPTER = "tests.common.adapters.AccountAdapter"
+
 SOCIALACCOUNT_QUERY_EMAIL = True
 SOCIALACCOUNT_PROVIDERS = {
     "openid_connect": {
@@ -254,3 +256,6 @@ ACCOUNT_LOGIN_BY_CODE_ENABLED = True
 
 MFA_SUPPORTED_TYPES = ["totp", "webauthn", "recovery_codes"]
 MFA_PASSKEY_LOGIN_ENABLED = True
+MFA_PASSKEY_SIGNUP_ENABLED = True
+
+HEADLESS_SERVE_SPECIFICATION = True
