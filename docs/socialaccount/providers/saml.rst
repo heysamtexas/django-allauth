@@ -68,13 +68,15 @@ via the Django admin as well:
                     # additional configuration is needed, which is placed in
                     # `SocialApp.settings`:
                     "settings": {
-
-                        # Mapping account attributes to upstream (IdP specific) attributes.
-                        # If left empty, an attempt will be done to map the attributes using
-                        # built-in defaults.
+                        # Mapping account attributes to upstream (IdP specific)
+                        # attributes. If left empty, an attempt will be done to map
+                        # the attributes using built-in defaults. If the provider does
+                        # not include "email_verified" independently, and you want to
+                        # set it at the IdP level instead of globally, you can include
+                        # "email_verified": ["true"] as shown in the example.
                         "attribute_mapping": {
-                            "uid": "urn:oid:0.9.2342.19200300.100.1.1",
-                            "email_verified": "urn:oid:0.9.2342.19200300.100.1.3",
+                            "uid": ["urn:oid:0.9.2342.19200300.100.1.1"],
+                            "email_verified": ["true"],
                             "email": "urn:oid:0.9.2342.19200300.100.1.3",
                         },
 
