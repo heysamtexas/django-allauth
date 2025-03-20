@@ -70,6 +70,9 @@ def trust_browser(
         encode_trust_cookie(trusts),
         max_age=app_settings.TRUST_COOKIE_AGE,
         path=app_settings.TRUST_COOKIE_PATH,
+        domain=app_settings.TRUST_COOKIE_DOMAIN,
+        secure=app_settings.TRUST_COOKIE_SECURE,
+        httponly=app_settings.TRUST_COOKIE_HTTPONLY,
     )
 
 
