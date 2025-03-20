@@ -1,5 +1,8 @@
 from allauth.account.stages import LoginStage
-from allauth.core.internal.httpkit import headed_redirect_response
+from allauth.core.internal.httpkit import (
+    headed_redirect_response,
+    is_headless_request,
+)
 from allauth.mfa import app_settings
 from allauth.mfa.internal.flows import trust
 from allauth.mfa.models import Authenticator
@@ -42,6 +45,10 @@ class TrustStage(LoginStage):
             or not auth_stage
             or not auth_stage.state.get("authentication_required")
         ):
+            return None, True
+        client = is_headless_request(self.request)
+        if client and client == "app":
+            # Trust-this-browser relies on cookies.
             return None, True
         response = headed_redirect_response("mfa_trust")
         return response, True
