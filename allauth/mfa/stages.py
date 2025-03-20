@@ -1,5 +1,6 @@
 from allauth.account.stages import LoginStage
 from allauth.core.internal.httpkit import headed_redirect_response
+from allauth.mfa.internal.flows import trust
 from allauth.mfa.models import Authenticator
 from allauth.mfa.utils import is_mfa_enabled
 from allauth.mfa.webauthn.internal.flows import did_use_passwordless_login
@@ -13,6 +14,7 @@ class AuthenticateStage(LoginStage):
     def handle(self):
         response, cont = None, True
         if self._should_handle(self.request):
+            self.state["authentication_required"] = True
             response = headed_redirect_response("mfa_authenticate")
         return response, cont
 
@@ -23,4 +25,18 @@ class AuthenticateStage(LoginStage):
             return False
         if did_use_passwordless_login(request):
             return False
+        if trust.is_trusted_browser(request):
+            return False
         return True
+
+
+class TrustStage(LoginStage):
+    key = "mfa_trust"
+    urlname = "mfa_trust"
+
+    def handle(self):
+        auth_stage = self.controller.get_stage(AuthenticateStage.key)
+        if not auth_stage or not auth_stage.state.get("authentication_required"):
+            return None, True
+        response = headed_redirect_response("mfa_trust")
+        return response, True

@@ -1,3 +1,6 @@
+from datetime import timedelta
+
+
 class AppSettings:
     def __init__(self, prefix):
         self.prefix = prefix
@@ -92,6 +95,25 @@ class AppSettings:
         return "webauthn" in self.SUPPORTED_TYPES and self._setting(
             "PASSKEY_SIGNUP_ENABLED", False
         )
+
+    @property
+    def TRUST_ENABLED(self) -> bool:
+        return self._setting("TRUST_ENABLED", False)
+
+    @property
+    def TRUST_COOKIE_AGE(self) -> timedelta:
+        age = self._setting("TRUST_COOKIE_AGE", timedelta(days=14))
+        if not isinstance(age, timedelta):
+            age = timedelta(seconds=age)
+        return age
+
+    @property
+    def TRUST_COOKIE_NAME(self) -> str:
+        return self._setting("TRUST_COOKIE_NAME", "mfa_trusted")
+
+    @property
+    def TRUST_COOKIE_PATH(self) -> str:
+        return self._setting("TRUST_COOKIE_PATH", "/")
 
 
 _app_settings = AppSettings("MFA_")

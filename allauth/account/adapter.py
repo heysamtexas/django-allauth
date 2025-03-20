@@ -753,6 +753,7 @@ class DefaultAccountAdapter(BaseAdapter):
             from allauth.mfa import app_settings as mfa_settings
 
             ret.append("allauth.mfa.stages.AuthenticateStage")
+            ret.append("allauth.mfa.stages.TrustStage")
 
             if mfa_settings.PASSKEY_SIGNUP_ENABLED:
                 ret.append("allauth.mfa.webauthn.stages.PasskeySignupStage")

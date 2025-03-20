@@ -9,4 +9,5 @@ urlpatterns: List[Union[URLPattern, URLResolver]] = [
     path("", views.index, name="mfa_index"),
     path("authenticate/", views.authenticate, name="mfa_authenticate"),
     path("reauthenticate/", views.reauthenticate, name="mfa_reauthenticate"),
+    path("trust/", views.trust, name="mfa_trust"),
 ]
