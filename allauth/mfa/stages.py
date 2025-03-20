@@ -1,5 +1,6 @@
 from allauth.account.stages import LoginStage
 from allauth.core.internal.httpkit import headed_redirect_response
+from allauth.mfa import app_settings
 from allauth.mfa.internal.flows import trust
 from allauth.mfa.models import Authenticator
 from allauth.mfa.utils import is_mfa_enabled
@@ -36,7 +37,11 @@ class TrustStage(LoginStage):
 
     def handle(self):
         auth_stage = self.controller.get_stage(AuthenticateStage.key)
-        if not auth_stage or not auth_stage.state.get("authentication_required"):
+        if (
+            not app_settings.TRUST_ENABLED
+            or not auth_stage
+            or not auth_stage.state.get("authentication_required")
+        ):
             return None, True
         response = headed_redirect_response("mfa_trust")
         return response, True
