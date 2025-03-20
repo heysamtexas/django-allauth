@@ -25,7 +25,7 @@ class AuthenticateStage(LoginStage):
             return False
         if did_use_passwordless_login(request):
             return False
-        if trust.is_trusted_browser(request):
+        if trust.is_trusted_browser(request, self.login.user):
             return False
         return True
 

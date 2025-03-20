@@ -166,9 +166,10 @@ class TrustView(FormView):
 
     def form_valid(self, form):
         do_trust = self.request.POST.get("action") == "trust"
-        response = self.request._login_stage.exit()
+        stage = self.request._login_stage
+        response = stage.exit()
         if do_trust:
-            trust_.trust_browser(self.request, response)
+            trust_.trust_browser(self.request, stage.login.user, response)
         return response
 
     def get_context_data(self, **kwargs):

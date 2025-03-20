@@ -18,14 +18,23 @@
             {% endelement %}
         {% endslot %}
         {% slot actions %}
-        {% element button_group %}
-            {% element button name="action" value="trust" type="submit" tags="primary,mfa,trust" %}
-                {% blocktranslate with period=trust_until|timeuntil:trust_from %}Trust for {{ period }}{% endblocktranslate %}
+            {% element button_group %}
+                {% element button name="action" value="trust" type="submit" tags="primary,mfa,trust" %}
+                    {% blocktranslate with period=trust_until|timeuntil:trust_from %}Trust for {{ period }}{% endblocktranslate %}
+                {% endelement %}
+                {% element button name="action" value="skip" type="submit" tags="outline,mfa,trust" %}
+                    {% trans "Don't Trust" %}
+                {% endelement %}
+                {% element button type="submit" form="logout-from-stage" tags="outline,mfa,trust,cancel" %}
+                    {% trans "Cancel" %}
+                {% endelement %}
             {% endelement %}
-            {% element button name="action" value="skip" type="submit" tags="outline,mfa,trust" %}
-                {% trans "Not now" %}
-            {% endelement %}
-        {% endelement %}
         {% endslot %}
     {% endelement %}
+    <form id="logout-from-stage"
+          method="post"
+          action="{% url 'account_logout' %}">
+        <input type="hidden" name="next" value="{% url 'account_login' %}">
+        {% csrf_token %}
+    </form>
 {% endblock content %}
