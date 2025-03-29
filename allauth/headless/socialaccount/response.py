@@ -25,6 +25,8 @@ def _provider_data(request, provider):
         ret["flows"].append(Flow.PROVIDER_TOKEN)
     if isinstance(provider, OAuth2Provider):
         ret["client_id"] = provider.app.client_id
+        if hasattr(provider, "server_url"):
+            ret["server_url"] = provider.server_url
 
     return ret
 
