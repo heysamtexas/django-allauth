@@ -1681,6 +1681,7 @@ components:
                 id: google
                 name: Google
                 client_id: 123.apps.googleusercontent.com
+                openid_configuration_url: https://accounts.google.com/.well-known/openid-configuration
                 flows:
                   - provider_redirect
                   - provider_token
