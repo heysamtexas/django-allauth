@@ -26,7 +26,7 @@ def _provider_data(request, provider):
     if isinstance(provider, OAuth2Provider):
         ret["client_id"] = provider.app.client_id
         if hasattr(provider, "server_url"):
-            ret["server_url"] = provider.server_url
+            ret["openid_configuration_url"] = provider.server_url
 
     return ret
 
