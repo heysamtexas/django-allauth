@@ -1,5 +1,6 @@
 {% load allauth %}
-<form method="{{ attrs.method }}" action="{{ attrs.action }}">
+{# NOTE: Omit action if unset to avoid compatibility issues with shouty #}
+<form method="{{ attrs.method }}" {% if attrs.action %} action="{{ attrs.action }}" {% endif attrs.action %}>
     {% slot body %}
     {% endslot %}
     {% slot actions %}
