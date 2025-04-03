@@ -1,3 +1,7 @@
+from datetime import timedelta
+
+from django.utils import timezone
+
 from oauthlib.openid import RequestValidator
 
 from allauth.idp.protocols.openid_connect.internal.clientkit import (
@@ -6,7 +10,7 @@ from allauth.idp.protocols.openid_connect.internal.clientkit import (
 from allauth.idp.protocols.openid_connect.internal.oauthlib import (
     authorization_codes,
 )
-from allauth.idp.protocols.openid_connect.models import Client
+from allauth.idp.protocols.openid_connect.models import Client, Token
 
 
 class MyRequestValidator(RequestValidator):
@@ -65,7 +69,7 @@ class MyRequestValidator(RequestValidator):
             return False
         return redirect_uri == authorization_code["redirect_uri"]
 
-    def save_bearer_token(self, token, request, *args, **kwargs):
+    def save_bearer_token(self, token: dict, request, *args, **kwargs):
         """Persist the Bearer token.
 
         The Bearer token should at minimum be associated with:
@@ -113,7 +117,26 @@ class MyRequestValidator(RequestValidator):
             - Resource Owner Password Credentials Grant (might not associate a client)
             - Client Credentials grant
         """
-        pass
+        tokens = [
+            Token(
+                client=request.client,
+                user=request.user,
+                type=Token.Type.ACCESS_TOKEN,
+                value=token["access_token"],
+                expires_at=timezone.now() + timedelta(seconds=token["expires_in"]),
+            )
+        ]
+        refresh_token = token.get("refresh_token")
+        if refresh_token:
+            tokens.append(
+                Token(
+                    client=request.client,
+                    user=request.user,
+                    type=Token.Type.REFRESH_TOKEN,
+                    value=refresh_token,
+                )
+            )
+        Token.objects.bulk_create(tokens)
 
     def invalidate_authorization_code(self, client_id, code, request, *args, **kwargs):
         authorization_codes.invalidate(client_id, code)

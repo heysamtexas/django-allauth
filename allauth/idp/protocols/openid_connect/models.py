@@ -83,6 +83,9 @@ class Client(models.Model):
             raise ValueError(grant_types)
         self.grant_types = "\n".join(grant_types)
 
+    def __str__(self) -> str:
+        return self.id
+
 
 class Token(models.Model):
     class Type(models.TextChoices):
@@ -101,3 +104,7 @@ class Token(models.Model):
 
     # FIXME: indices
     # FIXME: composite primary key type, value?
+    # FIXME: encrypt tokens?
+
+    def __str__(self) -> str:
+        return f"{self.get_type_display()} for user #{self.user_id}"
