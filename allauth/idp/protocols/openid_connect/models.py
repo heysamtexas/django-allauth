@@ -3,6 +3,7 @@ from typing import List
 
 from django.conf import settings
 from django.db import models
+from django.db.models import Q
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
@@ -87,7 +88,16 @@ class Client(models.Model):
         return self.id
 
 
+class TokenQuerySet(models.query.QuerySet):
+    def valid(self):
+        return self.filter(
+            Q(expires_at__isnull=True) | Q(expires_at__gt=timezone.now())
+        )
+
+
 class Token(models.Model):
+    objects = TokenQuerySet.as_manager()
+
     class Type(models.TextChoices):
         ACCESS_TOKEN = "at", "Access token"
         REFRESH_TOKEN = "rt", "Refresh token"

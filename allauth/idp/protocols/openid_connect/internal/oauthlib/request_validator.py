@@ -1,9 +1,14 @@
 from datetime import timedelta
+from typing import List
 
+from django.contrib.auth import get_user_model
 from django.utils import timezone
 
+import jwt
 from oauthlib.openid import RequestValidator
 
+from allauth.account.internal.userkit import user_id_to_str
+from allauth.core import context
 from allauth.idp.protocols.openid_connect.internal.clientkit import (
     is_redirect_uri_allowed,
 )
@@ -140,3 +145,45 @@ class MyRequestValidator(RequestValidator):
 
     def invalidate_authorization_code(self, client_id, code, request, *args, **kwargs):
         authorization_codes.invalidate(client_id, code)
+
+    def validate_user_match(self, id_token_hint, scopes, claims, request):
+        if id_token_hint:
+            # FIXME
+            raise NotImplementedError
+        if claims:
+            sub = claims.get("sub")
+            if sub:
+                # FIXME
+                raise NotImplementedError
+        return True
+
+    def get_authorization_code_scopes(
+        self, client_id, code, redirect_uri, request
+    ) -> List[str]:
+        authorization_code = authorization_codes.lookup(client_id, code)
+        return authorization_code["scopes"]
+
+    def get_authorization_code_nonce(self, client_id, code, redirect_uri, request):
+        authorization_code = authorization_codes.lookup(client_id, code)
+        return "FIXME"
+
+    def finalize_id_token(self, id_token: dict, token: dict, token_handler, request):
+        id_token["sub"] = user_id_to_str(request.user)
+        id_token["iss"] = context.request.build_absolute_uri("/").rstrip("/")
+        id_token["exp"] = id_token["iat"] + 5 * 60  # FIXME: hardcoded
+        return jwt.encode(id_token, key="FIXME")
+
+    def validate_bearer_token(self, token, scopes, request) -> bool:
+        instance = (
+            Token.objects.valid()
+            .filter(type=Token.Type.ACCESS_TOKEN, value=token)
+            .first()
+        )
+        if not instance:
+            return False
+        request.user = instance.user
+        return True
+
+    def get_userinfo_claims(self, request):
+        # FIXME
+        return {"sub": user_id_to_str(request.user)}

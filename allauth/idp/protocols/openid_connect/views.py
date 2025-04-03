@@ -52,20 +52,16 @@ class AuthorizeView(FormView):
     form_class = AuthorizeForm
     template_name = "idp/openid_connect/authorize_form.html"
 
-    def __init__(self):
-        self._authorization_endpoint = server
-
     def dispatch(self, request, *args, **kwargs):
         if request.method == "GET":
             uri, http_method, body, headers = extract_params(self.request)
 
             try:
                 self._scopes, self._request_info = (
-                    self._authorization_endpoint.validate_authorization_request(
+                    server.validate_authorization_request(
                         uri, http_method, body, headers
                     )
                 )
-                self._request_info.pop("request")
             # Errors that should be shown to the user on the provider website
             except errors.FatalClientError as e:
                 return response_from_error(e)
@@ -101,7 +97,12 @@ class AuthorizeView(FormView):
     def get_initial(self):
         signer = Signer()
         ret = {}
-        ret["request"] = signer.sign_object((self._scopes, self._request_info))
+        request_info = self._request_info
+        request_info.pop("request", None)
+        prompt = request_info.get("prompt")
+        if isinstance(prompt, set):
+            request_info["prompt"] = list(prompt)
+        ret["request"] = signer.sign_object((self._scopes, request_info))
         return ret
 
     def form_valid(self, form):
@@ -110,10 +111,8 @@ class AuthorizeView(FormView):
         credentials = {"user": self.request.user}
         credentials.update(self._request_info)
         try:
-            headers, body, status = (
-                self._authorization_endpoint.create_authorization_response(
-                    uri, http_method, body, headers, scopes, credentials
-                )
+            headers, body, status = server.create_authorization_response(
+                uri, http_method, body, headers, scopes, credentials
             )
             return response_from_return(headers, body, status)
 
@@ -137,14 +136,10 @@ authorize = AuthorizeView.as_view()
 @method_decorator(csrf_exempt, name="dispatch")
 class TokenView(View):
 
-    def __init__(self):
-        # Using the server from previous section
-        self._token_endpoint = server
-
     def post(self, request):
         uri, http_method, body, headers = extract_params(request)
         credentials = {}
-        headers, body, status = self._token_endpoint.create_token_response(
+        headers, body, status = server.create_token_response(
             uri, http_method, body, headers, credentials
         )
 
@@ -157,12 +152,11 @@ token = TokenView.as_view()
 class UserInfoView(View):
 
     def get(self, request):
-        # FIXME
-        user = get_user_model().objects.last()
-        user.email = "foo@bar.com"
-        return JsonResponse(
-            {"sub": user.pk, "email": user.email, "email_verified": True}
+        uri, http_method, body, headers = extract_params(request)
+        headers, body, status = server.create_userinfo_response(
+            uri, http_method, body, headers
         )
+        return response_from_return(headers, body, status)
 
 
 user_info = UserInfoView.as_view()
