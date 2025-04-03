@@ -1,7 +1,8 @@
+import uuid
 from datetime import timedelta
 from typing import List
 
-from django.contrib.auth import get_user_model
+from django.conf import settings
 from django.utils import timezone
 
 import jwt
@@ -9,6 +10,7 @@ from oauthlib.openid import RequestValidator
 
 from allauth.account.internal.userkit import user_id_to_str
 from allauth.core import context
+from allauth.core.internal import jwkkit
 from allauth.idp.protocols.openid_connect.internal.clientkit import (
     is_redirect_uri_allowed,
 )
@@ -165,13 +167,19 @@ class MyRequestValidator(RequestValidator):
 
     def get_authorization_code_nonce(self, client_id, code, redirect_uri, request):
         authorization_code = authorization_codes.lookup(client_id, code)
-        return "FIXME"
+        return authorization_code["code"].get("nonce")
 
     def finalize_id_token(self, id_token: dict, token: dict, token_handler, request):
         id_token["sub"] = user_id_to_str(request.user)
         id_token["iss"] = context.request.build_absolute_uri("/").rstrip("/")
         id_token["exp"] = id_token["iat"] + 5 * 60  # FIXME: hardcoded
-        return jwt.encode(id_token, key="FIXME")
+        id_token["jti"] = uuid.uuid4().hex
+        jwk_dict, private_key = jwkkit.load_jwk_from_pem(
+            settings.IDP_OPENID_CONNECT_PRIVATE_KEYS[0]
+        )
+        return jwt.encode(
+            id_token, private_key, algorithm="RS256", headers={"kid": jwk_dict["kid"]}
+        )
 
     def validate_bearer_token(self, token, scopes, request) -> bool:
         instance = (

@@ -6,9 +6,21 @@ from allauth.idp.protocols.openid_connect import views
 app_name = "openid_connect"
 urlpatterns = [
     path(
-        ".well-known/openid-configuration",
-        views.configuration,
-        name="configuration",
+        ".well-known/",
+        include(
+            [
+                path(
+                    "openid-configuration",
+                    views.configuration,
+                    name="configuration",
+                ),
+                path(
+                    "jwks.json",
+                    views.jwks,
+                    name="jwks",
+                ),
+            ]
+        ),
     ),
     path(
         "identity/",

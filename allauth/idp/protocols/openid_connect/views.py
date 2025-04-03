@@ -1,4 +1,6 @@
-from django.contrib.auth import get_user_model
+import json
+
+from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.contrib.sites.shortcuts import get_current_site
 from django.core.exceptions import PermissionDenied
@@ -10,8 +12,12 @@ from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 from django.views.generic.edit import FormView
 
+from cryptography.hazmat.primitives.serialization import load_pem_private_key
+from jwt.algorithms import RSAAlgorithm
 from oauthlib.oauth2.rfc6749 import errors
 
+from allauth.account.internal.decorators import login_not_required
+from allauth.core.internal import jwkkit
 from allauth.core.internal.httpkit import add_query_params
 from allauth.idp.protocols.openid_connect.forms import AuthorizeForm
 from allauth.idp.protocols.openid_connect.internal.oauthlib.server import (
@@ -26,6 +32,7 @@ from allauth.idp.protocols.openid_connect.models import Client
 from allauth.utils import build_absolute_uri
 
 
+@method_decorator(login_not_required, name="dispatch")
 class ConfigurationView(View):
     def get(self, request):
         data = {
@@ -38,6 +45,7 @@ class ConfigurationView(View):
             "userinfo_endpoint": build_absolute_uri(
                 request, reverse("idp:openid_connect:userinfo")
             ),
+            "jwks_uri": build_absolute_uri(request, reverse("idp:openid_connect:jwks")),
         }
         response = JsonResponse(data)
         response["Access-Control-Allow-Origin"] = "*"
@@ -160,3 +168,18 @@ class UserInfoView(View):
 
 
 user_info = UserInfoView.as_view()
+
+
+@method_decorator(login_not_required, name="dispatch")
+class JwksView(View):
+    def get(self, request, *args, **kwargs):
+        keys = []
+        for pem in settings.IDP_OPENID_CONNECT_PRIVATE_KEYS:
+            jwk, _ = jwkkit.load_jwk_from_pem(pem)
+            keys.append(jwk)
+        response = JsonResponse({"keys": keys})
+        response["Access-Control-Allow-Origin"] = "*"
+        return response
+
+
+jwks = JwksView.as_view()
