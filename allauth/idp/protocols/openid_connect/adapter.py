@@ -47,6 +47,12 @@ class DefaultOpenIDConnectAdapter(BaseAdapter):
         """
         return hashlib.sha256(token.encode("utf-8")).hexdigest()
 
+    def get_issuer(self) -> str:
+        """
+        Returns the URL of the issuer.
+        """
+        return self.request.build_absolute_uri("/").rstrip("/")
+
 
 def get_adapter() -> DefaultOpenIDConnectAdapter:
     return import_attribute(app_settings.ADAPTER)()

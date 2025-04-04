@@ -184,7 +184,7 @@ class MyRequestValidator(RequestValidator):
 
     def finalize_id_token(self, id_token: dict, token: dict, token_handler, request):
         id_token["sub"] = user_id_to_str(request.user)
-        id_token["iss"] = context.request.build_absolute_uri("/").rstrip("/")
+        id_token["iss"] = get_adapter().get_issuer()
         id_token["exp"] = id_token["iat"] + 5 * 60  # FIXME: hardcoded
         id_token["jti"] = uuid.uuid4().hex
         jwk_dict, private_key = jwkkit.load_jwk_from_pem(

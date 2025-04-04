@@ -24,5 +24,3 @@ class TokenAdmin(admin.ModelAdmin):
         "expires_at",
     )
     list_filter = ("type",)
-
-    # FIXME: garble/hide values

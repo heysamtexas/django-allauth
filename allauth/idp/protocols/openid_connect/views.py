@@ -19,6 +19,7 @@ from oauthlib.oauth2.rfc6749 import errors
 from allauth.account.internal.decorators import login_not_required
 from allauth.core.internal import jwkkit
 from allauth.core.internal.httpkit import add_query_params
+from allauth.idp.protocols.openid_connect.adapter import get_adapter
 from allauth.idp.protocols.openid_connect.forms import AuthorizeForm
 from allauth.idp.protocols.openid_connect.internal.oauthlib.server import (
     server,
@@ -46,6 +47,12 @@ class ConfigurationView(View):
                 request, reverse("idp:openid_connect:userinfo")
             ),
             "jwks_uri": build_absolute_uri(request, reverse("idp:openid_connect:jwks")),
+            "issuer": get_adapter().get_issuer(),
+            "response_types_supported": [
+                "code",
+            ],
+            "subject_types_supported": ["public"],
+            "id_token_signing_alg_values_supported": ["RS256"],
         }
         response = JsonResponse(data)
         response["Access-Control-Allow-Origin"] = "*"
