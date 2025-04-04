@@ -107,7 +107,7 @@ class Token(models.Model):
     client = models.ForeignKey(Client, on_delete=models.CASCADE)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     data = models.JSONField(blank=True, null=True, default=None)
-    created_at = models.DateTimeField(default=timezone.now())
+    created_at = models.DateTimeField(default=timezone.now)
     expires_at = models.DateTimeField(blank=True, null=True)
     value = models.CharField(primary_key=True, max_length=255)
     scopes = models.TextField(default="")

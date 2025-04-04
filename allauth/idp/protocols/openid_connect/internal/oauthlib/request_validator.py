@@ -163,6 +163,8 @@ class MyRequestValidator(RequestValidator):
         self, client_id, code, redirect_uri, request
     ) -> List[str]:
         authorization_code = authorization_codes.lookup(client_id, code)
+        if not authorization_code:
+            return []
         return authorization_code["scopes"]
 
     def get_authorization_code_nonce(self, client_id, code, redirect_uri, request):
@@ -195,3 +197,9 @@ class MyRequestValidator(RequestValidator):
     def get_userinfo_claims(self, request):
         # FIXME
         return {"sub": user_id_to_str(request.user)}
+
+    def get_default_redirect_uri(self, client_id, request, *args, **kwargs):
+        uris = request.client.get_redirect_uris()
+        if uris:
+            return uris[0]
+        return None
