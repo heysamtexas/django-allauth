@@ -55,7 +55,8 @@ class MyRequestValidator(RequestValidator):
         client = Client.objects.filter(id=client_id).first()
         if not client:
             return False
-        # FIXME: check secret
+        if client.get_secret() != client_secret:
+            return False
         request.client = client
         request.client.client_id = client_id
         return True

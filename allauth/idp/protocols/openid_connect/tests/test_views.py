@@ -61,7 +61,7 @@ def test_authorization_code_flow(auth_client, oidc_client, enable_cache):
             "code": code,
             "grant_type": "authorization_code",
             "client_id": oidc_client.id,
-            "client_secret": "FIXME",
+            "client_secret": oidc_client.get_secret(),
         },
     )
     assert resp.status_code == HTTPStatus.OK

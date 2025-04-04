@@ -7,9 +7,19 @@ from django.db.models import Q
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
+from allauth.idp.protocols.openid_connect.adapter import get_adapter
 
-def generate_client_id() -> str:
-    return uuid.uuid4().hex
+
+def default_client_id() -> str:
+    adapter = get_adapter()
+    client_id = adapter.generate_client_id()
+    return adapter.encrypt(client_id)
+
+
+def default_client_secret() -> str:
+    adapter = get_adapter()
+    client_secret = adapter.generate_client_secret()
+    return adapter.encrypt(client_secret)
 
 
 class Client(models.Model):
@@ -21,12 +31,12 @@ class Client(models.Model):
     id = models.CharField(
         primary_key=True,
         max_length=100,
-        default=generate_client_id,
+        default=default_client_id,
     )
     name = models.CharField(
         max_length=100,
     )
-    secret = models.CharField(max_length=200)
+    secret = models.CharField(max_length=200, default=default_client_secret)
     scopes = models.TextField(
         help_text=_("The scope the client is allowed to request."),
     )
@@ -83,6 +93,12 @@ class Client(models.Model):
         if isinstance(grant_types, str):
             raise ValueError(grant_types)
         self.grant_types = "\n".join(grant_types)
+
+    def get_secret(self) -> str:
+        return get_adapter().decrypt(self.secret)
+
+    def set_secret(self, secret) -> str:
+        self.secret = get_adapter().encrypt(secret)
 
     def __str__(self) -> str:
         return self.id
