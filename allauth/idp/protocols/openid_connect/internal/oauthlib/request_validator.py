@@ -44,6 +44,14 @@ class MyRequestValidator(RequestValidator):
         return []
 
     def save_authorization_code(self, client_id, code, request, *args, **kwargs):
+        # WORKAROUND: docstring says:
+        # > To support OIDC, you MUST associate the code with:
+        # > - nonce, if present (``code["nonce"]``)
+        # Yet, nonce is not there, it is in request.nonce.
+        nonce = getattr(request, "nonce", None)
+        if nonce:
+            code = dict(**code, nonce=nonce)
+        # (end WORKAROUND)
         authorization_codes.create(client_id, code, request)
 
     def authenticate_client(self, request, *args, **kwargs):

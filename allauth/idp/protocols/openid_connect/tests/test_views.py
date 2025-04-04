@@ -4,6 +4,7 @@ from urllib.parse import parse_qs, urlparse
 from django.urls import reverse
 from django.utils.http import urlencode
 
+import jwt
 from pytest_django.asserts import assertTemplateUsed
 
 
@@ -12,7 +13,12 @@ def test_cancel_authorization(auth_client, oidc_client):
     resp = auth_client.get(
         reverse("idp:openid_connect:authorize")
         + "?"
-        + urlencode({"client_id": oidc_client.id, "response_type": "code"})
+        + urlencode(
+            {
+                "client_id": oidc_client.id,
+                "response_type": "code",
+            }
+        )
     )
     assert resp.status_code == HTTPStatus.OK
     assertTemplateUsed(resp, "idp/openid_connect/authorize_form.html")
@@ -26,7 +32,7 @@ def test_cancel_authorization(auth_client, oidc_client):
     assert resp["location"] == f"{uri}?error=access_denied"
 
 
-def test_authorization_code_flow(auth_client, oidc_client, enable_cache):
+def test_authorization_code_flow(auth_client, user, oidc_client, enable_cache):
     uri = oidc_client.get_redirect_uris()[0]
     resp = auth_client.get(
         reverse("idp:openid_connect:authorize")
@@ -36,6 +42,8 @@ def test_authorization_code_flow(auth_client, oidc_client, enable_cache):
                 "client_id": oidc_client.id,
                 "response_type": "code",
                 "scope": "openid profile email",
+                "nonce": "some-nonce",
+                "state": "some-state",
             }
         )
     )
@@ -74,3 +82,9 @@ def test_authorization_code_flow(auth_client, oidc_client, enable_cache):
         "refresh_token",
         "id_token",
     }
+
+    # ID token
+    id_token = data["id_token"]
+    decoded = jwt.decode(id_token, options={"verify_signature": False})
+    assert decoded["sub"] == str(user.pk)
+    assert decoded["nonce"] == "some-nonce"
