@@ -11,6 +11,7 @@ from oauthlib.openid import RequestValidator
 from allauth.account.internal.userkit import user_id_to_str
 from allauth.core import context
 from allauth.core.internal import jwkkit
+from allauth.idp.protocols.openid_connect.adapter import get_adapter
 from allauth.idp.protocols.openid_connect.internal.clientkit import (
     is_redirect_uri_allowed,
 )
@@ -133,12 +134,13 @@ class MyRequestValidator(RequestValidator):
             - Resource Owner Password Credentials Grant (might not associate a client)
             - Client Credentials grant
         """
+        adapter = get_adapter()
         tokens = [
             Token(
                 client=request.client,
                 user=request.user,
                 type=Token.Type.ACCESS_TOKEN,
-                value=token["access_token"],
+                hash=adapter.hash_token(token["access_token"]),
                 expires_at=timezone.now() + timedelta(seconds=token["expires_in"]),
             )
         ]
@@ -149,7 +151,7 @@ class MyRequestValidator(RequestValidator):
                     client=request.client,
                     user=request.user,
                     type=Token.Type.REFRESH_TOKEN,
-                    value=refresh_token,
+                    hash=adapter.hash_token(refresh_token),
                 )
             )
         Token.objects.bulk_create(tokens)
@@ -193,11 +195,7 @@ class MyRequestValidator(RequestValidator):
         )
 
     def validate_bearer_token(self, token, scopes, request) -> bool:
-        instance = (
-            Token.objects.valid()
-            .filter(type=Token.Type.ACCESS_TOKEN, value=token)
-            .first()
-        )
+        instance = Token.objects.lookup(Token.Type.ACCESS_TOKEN, token)
         if not instance:
             return False
         request.user = instance.user

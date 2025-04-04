@@ -110,6 +110,11 @@ class TokenQuerySet(models.query.QuerySet):
             Q(expires_at__isnull=True) | Q(expires_at__gt=timezone.now())
         )
 
+    def lookup(self, type, value):
+        return (
+            self.valid().filter(type=type, hash=get_adapter().hash_token(value)).first()
+        )
+
 
 class Token(models.Model):
     objects = TokenQuerySet.as_manager()
@@ -120,17 +125,16 @@ class Token(models.Model):
         AUTHORIZATION_CODE = "ac", "Authorization code"
 
     type = models.CharField(max_length=2, choices=Type.choices)
+    hash = models.CharField(primary_key=True, max_length=255)
     client = models.ForeignKey(Client, on_delete=models.CASCADE)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     data = models.JSONField(blank=True, null=True, default=None)
     created_at = models.DateTimeField(default=timezone.now)
     expires_at = models.DateTimeField(blank=True, null=True)
-    value = models.CharField(primary_key=True, max_length=255)
     scopes = models.TextField(default="")
 
     # FIXME: indices
     # FIXME: composite primary key type, value?
-    # FIXME: encrypt tokens?
 
     def __str__(self) -> str:
         return f"{self.get_type_display()} for user #{self.user_id}"

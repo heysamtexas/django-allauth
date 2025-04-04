@@ -1,3 +1,4 @@
+import hashlib
 import uuid
 
 from django.core.management.utils import get_random_secret_key
@@ -38,6 +39,13 @@ class DefaultOpenIDConnectAdapter(BaseAdapter):
         The client secret to use for newly created clients.
         """
         return get_random_secret_key()
+
+    def hash_token(self, token: str) -> str:
+        """
+        We only store tokens directly, only the hash of the token. This methods generates
+        that hash.
+        """
+        return hashlib.sha256(token.encode("utf-8")).hexdigest()
 
 
 def get_adapter() -> DefaultOpenIDConnectAdapter:

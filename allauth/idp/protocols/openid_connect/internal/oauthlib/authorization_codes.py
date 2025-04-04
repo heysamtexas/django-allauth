@@ -25,9 +25,6 @@ def create(client_id: str, code: dict, request):
             "code_challenge": code_challenge,
             "code_challenge_method": request.code_challenge_method,
         }
-    import pprint
-
-    pprint.pprint(authorization_code)
     # FIXME: timeout setting
     # FIXME: cache? configurable?
     cache.set(
