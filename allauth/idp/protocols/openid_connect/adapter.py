@@ -1,9 +1,11 @@
 import hashlib
 import uuid
 
+from django.contrib.auth import get_user_model
 from django.core.management.utils import get_random_secret_key
 from django.utils.translation import gettext_lazy as _
 
+from allauth.account.internal.userkit import str_to_user_id, user_id_to_str
 from allauth.core.internal.adapter import BaseAdapter
 from allauth.idp.protocols.openid_connect import app_settings
 from allauth.utils import import_attribute
@@ -60,6 +62,23 @@ class DefaultOpenIDConnectAdapter(BaseAdapter):
         expose additional information here.
         """
         pass
+
+    def get_user_sub(self, client, user) -> str:
+        """
+        Returns the "sub" (subject identifier) for the given user.
+        """
+        return user_id_to_str(user)
+
+    def get_user_by_sub(self, client, sub: str):
+        """
+        Looks up a user, given its subject identifier. Returns `None` if no
+        such user was found.
+        """
+        try:
+            pk = str_to_user_id(sub)
+        except ValueError:
+            return None
+        return get_user_model().objects.filter(pk=pk).first()
 
 
 def get_adapter() -> DefaultOpenIDConnectAdapter:

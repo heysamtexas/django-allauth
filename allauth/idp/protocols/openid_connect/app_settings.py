@@ -18,6 +18,10 @@ class AppSettings:
     def ID_TOKEN_EXP(self) -> int:
         return 5 * 60
 
+    @property
+    def PRIVATE_KEYS(self) -> list[str]:
+        return self._setting("PRIVATE_KEYS", [])
+
 
 _app_settings = AppSettings("IDP_OPENID_CONNECT_")
 

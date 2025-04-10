@@ -151,3 +151,51 @@ def test_authorization_code_flow_skip_consent(
         "refresh_token",
         "id_token",
     }
+
+
+def test_authorize_id_token_hint_match(
+    user, id_token_generator, oidc_client, auth_client, user_factory
+):
+    # Pass along ID token as hint
+    resp = auth_client.get(
+        reverse("idp:openid_connect:authorize")
+        + "?"
+        + urlencode(
+            {
+                "client_id": oidc_client.id,
+                "id_token_hint": id_token_generator(oidc_client, user),
+                "response_type": "code",
+                "scope": "openid",
+                "nonce": "some-nonce",
+                "state": "some-state",
+            }
+        )
+    )
+    assert resp.status_code == HTTPStatus.OK
+
+
+def test_authorize_id_token_hint_mismatch(
+    user, id_token_generator, oidc_client, auth_client, user_factory
+):
+    # Pass along ID token as hint
+    resp = auth_client.get(
+        reverse("idp:openid_connect:authorize")
+        + "?"
+        + urlencode(
+            {
+                "client_id": oidc_client.id,
+                "id_token_hint": id_token_generator(oidc_client, user_factory()),
+                "response_type": "code",
+                "scope": "openid",
+                "nonce": "some-nonce",
+                "state": "some-state",
+            }
+        )
+    )
+    assert resp.status_code == HTTPStatus.FOUND
+    parts = urlparse(resp["location"])
+    params = parse_qs(parts.query)
+    assert params["error"] == ["login_required"]
+    assert params["error_description"] == [
+        "Session user does not match client supplied user."
+    ]

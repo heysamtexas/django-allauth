@@ -2,13 +2,11 @@ import uuid
 from datetime import timedelta
 from typing import List
 
-from django.conf import settings
 from django.utils import timezone
 
 import jwt
 from oauthlib.openid import RequestValidator
 
-from allauth.account.internal.userkit import user_id_to_str
 from allauth.account.models import EmailAddress
 from allauth.account.utils import user_username
 from allauth.core import context
@@ -163,14 +161,27 @@ class MyRequestValidator(RequestValidator):
         authorization_codes.invalidate(client_id, code)
 
     def validate_user_match(self, id_token_hint, scopes, claims, request):
+        if not context.request.user:
+            return False
+        sub = None
         if id_token_hint:
-            # FIXME
-            raise NotImplementedError
+            try:
+                payload = self._decode_id_token(request.client, id_token_hint)
+            except jwt.PyJWTError:
+                return False
+            sub = payload.get("sub")
+            session_sub = get_adapter().get_user_sub(
+                request.client, context.request.user
+            )
+            if sub != session_sub:
+                return False
         if claims:
             sub = claims.get("sub")
-            if sub:
-                # FIXME
-                raise NotImplementedError
+            session_sub = get_adapter().get_user_sub(
+                request.client, context.request.user
+            )
+            if sub != session_sub:
+                return False
         return True
 
     def get_authorization_code_scopes(
@@ -189,13 +200,11 @@ class MyRequestValidator(RequestValidator):
         """
         https://openid.net/specs/openid-connect-core-1_0.html#StandardClaims
         """
-        id_token["sub"] = user_id_to_str(request.user)
-        id_token["iss"] = get_adapter().get_issuer()
+        adapter = get_adapter()
+        id_token["sub"] = adapter.get_user_sub(request.client, request.user)
+        id_token["iss"] = adapter.get_issuer()
         id_token["exp"] = id_token["iat"] + app_settings.ID_TOKEN_EXP
         id_token["jti"] = uuid.uuid4().hex
-        jwk_dict, private_key = jwkkit.load_jwk_from_pem(
-            settings.IDP_OPENID_CONNECT_PRIVATE_KEYS[0]
-        )
         if "email" in request.scopes:
             address = EmailAddress.objects.get_primary(request.user)
             if address:
@@ -220,6 +229,7 @@ class MyRequestValidator(RequestValidator):
                 if claim_value:
                     id_token[claim_key] = claim_value
         get_adapter().populate_id_token(id_token, request.client, request.scopes)
+        jwk_dict, private_key = jwkkit.load_jwk_from_pem(app_settings.PRIVATE_KEYS[0])
         return jwt.encode(
             id_token, private_key, algorithm="RS256", headers={"kid": jwk_dict["kid"]}
         )
@@ -233,7 +243,7 @@ class MyRequestValidator(RequestValidator):
 
     def get_userinfo_claims(self, request):
         # FIXME
-        claims = {"sub": user_id_to_str(request.user)}
+        claims = {"sub": get_adapter().get_user_sub(request.client, request.user)}
         return claims
 
     def get_default_redirect_uri(self, client_id, request, *args, **kwargs):
@@ -241,3 +251,18 @@ class MyRequestValidator(RequestValidator):
         if uris:
             return uris[0]
         return None
+
+    def _decode_id_token(self, client, id_token: str):
+        jwk_dict, private_key = jwkkit.load_jwk_from_pem(app_settings.PRIVATE_KEYS[0])
+        return jwt.decode(
+            id_token,
+            audience=client.id,
+            key=private_key.public_key(),
+            algorithms=["RS256"],
+            options={
+                "verify_signature": True,
+                "verify_iss": True,
+                "verify_aud": True,
+                "verify_exp": True,
+            },
+        )
