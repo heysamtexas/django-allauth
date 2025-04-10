@@ -14,6 +14,10 @@ class AppSettings:
             "allauth.idp.protocols.openid_connect.adapter.DefaultOpenIDConnectAdapter",
         )
 
+    @property
+    def ID_TOKEN_EXP(self) -> int:
+        return 5 * 60
+
 
 _app_settings = AppSettings("IDP_OPENID_CONNECT_")
 

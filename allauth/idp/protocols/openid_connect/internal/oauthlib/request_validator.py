@@ -13,6 +13,7 @@ from allauth.account.models import EmailAddress
 from allauth.account.utils import user_username
 from allauth.core import context
 from allauth.core.internal import jwkkit
+from allauth.idp.protocols.openid_connect import app_settings
 from allauth.idp.protocols.openid_connect.adapter import get_adapter
 from allauth.idp.protocols.openid_connect.internal.clientkit import (
     is_redirect_uri_allowed,
@@ -190,7 +191,7 @@ class MyRequestValidator(RequestValidator):
         """
         id_token["sub"] = user_id_to_str(request.user)
         id_token["iss"] = get_adapter().get_issuer()
-        id_token["exp"] = id_token["iat"] + 5 * 60  # FIXME: hardcoded
+        id_token["exp"] = id_token["iat"] + app_settings.ID_TOKEN_EXP
         id_token["jti"] = uuid.uuid4().hex
         jwk_dict, private_key = jwkkit.load_jwk_from_pem(
             settings.IDP_OPENID_CONNECT_PRIVATE_KEYS[0]
