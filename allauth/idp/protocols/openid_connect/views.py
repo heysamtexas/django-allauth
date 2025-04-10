@@ -82,7 +82,8 @@ class AuthorizeView(FormView):
                 return response_from_error(e)
             except errors.OAuth2Error as e:
                 return HttpResponseRedirect(e.in_uri(e.redirect_uri))
-            # FIXME: skip consent?
+            if self._request_info["request"].client.skip_consent:
+                return self._skip_consent()
         elif request.method == "POST":
             signed_request_info = request.POST.get("request")
             try:
@@ -93,10 +94,23 @@ class AuthorizeView(FormView):
             except BadSignature:
                 raise PermissionDenied
             if request.POST.get("action") != "grant":
-                return self.respond_with_access_denied()
+                return self._respond_with_access_denied()
         return super().dispatch(request, *args, **kwargs)
 
-    def respond_with_access_denied(self):
+    def _skip_consent(self):
+        scopes = self._request_info["request"].scopes
+        form_kwargs = self.get_form_kwargs()
+        form_kwargs["data"] = {
+            "scopes": scopes,
+            "request": "not-relevant-for-skip-consent",
+        }
+        form = self.form_class(**form_kwargs)
+        if not form.is_valid():
+            # Shouldn't occur.
+            raise PermissionDenied()
+        return self.form_valid(form)
+
+    def _respond_with_access_denied(self):
         redirect_uri = self._request_info.get("redirect_uri")
         state = self._request_info.get("state")
         params = {"error": "access_denied"}

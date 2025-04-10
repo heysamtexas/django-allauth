@@ -88,3 +88,49 @@ def test_authorization_code_flow(auth_client, user, oidc_client, enable_cache):
     decoded = jwt.decode(id_token, options={"verify_signature": False})
     assert decoded["sub"] == str(user.pk)
     assert decoded["nonce"] == "some-nonce"
+
+
+def test_authorization_code_flow_skip_consent(
+    auth_client, user, oidc_client, enable_cache
+):
+    oidc_client.skip_consent = True
+    oidc_client.save()
+    uri = oidc_client.get_redirect_uris()[0]
+    resp = auth_client.get(
+        reverse("idp:openid_connect:authorize")
+        + "?"
+        + urlencode(
+            {
+                "client_id": oidc_client.id,
+                "response_type": "code",
+                "scope": "openid profile email",
+                "nonce": "some-nonce",
+                "state": "some-state",
+            }
+        )
+    )
+    assert resp.status_code == HTTPStatus.FOUND
+    redirected_uri = resp["location"]
+    assert redirected_uri.startswith(uri)
+    parts = urlparse(redirected_uri)
+    params = parse_qs(parts.query)
+    code = params["code"][0]
+    resp = auth_client.post(
+        reverse("idp:openid_connect:token"),
+        {
+            "code": code,
+            "grant_type": "authorization_code",
+            "client_id": oidc_client.id,
+            "client_secret": oidc_client.get_secret(),
+        },
+    )
+    assert resp.status_code == HTTPStatus.OK
+    data = resp.json()
+    assert set(data.keys()) == {
+        "access_token",
+        "expires_in",
+        "token_type",
+        "scope",
+        "refresh_token",
+        "id_token",
+    }
