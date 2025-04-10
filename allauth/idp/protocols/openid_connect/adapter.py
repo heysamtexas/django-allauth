@@ -53,6 +53,14 @@ class DefaultOpenIDConnectAdapter(BaseAdapter):
         """
         return self.request.build_absolute_uri("/").rstrip("/")
 
+    def populate_id_token(self, id_token: dict, client, scopes, **kwargs) -> None:
+        """
+        This method can be used to alter the ID token payload. It is already populated
+        with basic values. Depending ont the client and requested scopes, you can
+        expose additional information here.
+        """
+        pass
+
 
 def get_adapter() -> DefaultOpenIDConnectAdapter:
     return import_attribute(app_settings.ADAPTER)()

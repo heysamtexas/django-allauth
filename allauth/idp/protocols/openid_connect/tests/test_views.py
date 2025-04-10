@@ -5,6 +5,7 @@ from django.urls import reverse
 from django.utils.http import urlencode
 
 import jwt
+import pytest
 from pytest_django.asserts import assertTemplateUsed
 
 
@@ -32,7 +33,15 @@ def test_cancel_authorization(auth_client, oidc_client):
     assert resp["location"] == f"{uri}?error=access_denied"
 
 
-def test_authorization_code_flow(auth_client, user, oidc_client, enable_cache):
+@pytest.mark.parametrize(
+    "scopes",
+    [
+        ("openid", "profile", "email"),
+        ("openid", "profile"),
+        ("openid",),
+    ],
+)
+def test_authorization_code_flow(auth_client, user, oidc_client, enable_cache, scopes):
     uri = oidc_client.get_redirect_uris()[0]
     resp = auth_client.get(
         reverse("idp:openid_connect:authorize")
@@ -41,7 +50,7 @@ def test_authorization_code_flow(auth_client, user, oidc_client, enable_cache):
             {
                 "client_id": oidc_client.id,
                 "response_type": "code",
-                "scope": "openid profile email",
+                "scope": " ".join(scopes),
                 "nonce": "some-nonce",
                 "state": "some-state",
             }
@@ -52,7 +61,7 @@ def test_authorization_code_flow(auth_client, user, oidc_client, enable_cache):
     resp = auth_client.post(
         reverse("idp:openid_connect:authorize"),
         {
-            "scopes": ["openid", "profile", "email"],
+            "scopes": scopes,
             "action": "grant",
             "request": resp.context["form"]["request"].value(),
         },
@@ -88,6 +97,14 @@ def test_authorization_code_flow(auth_client, user, oidc_client, enable_cache):
     decoded = jwt.decode(id_token, options={"verify_signature": False})
     assert decoded["sub"] == str(user.pk)
     assert decoded["nonce"] == "some-nonce"
+    if "email" in scopes:
+        assert decoded["email"] == user.email
+    else:
+        assert "email" not in decoded
+    if "profile" in scopes:
+        assert decoded["preferred_username"] == user.username
+    else:
+        assert "preferred_username" not in decoded
 
 
 def test_authorization_code_flow_skip_consent(

@@ -9,6 +9,8 @@ import jwt
 from oauthlib.openid import RequestValidator
 
 from allauth.account.internal.userkit import user_id_to_str
+from allauth.account.models import EmailAddress
+from allauth.account.utils import user_username
 from allauth.core import context
 from allauth.core.internal import jwkkit
 from allauth.idp.protocols.openid_connect.adapter import get_adapter
@@ -183,6 +185,9 @@ class MyRequestValidator(RequestValidator):
         return authorization_code["code"].get("nonce")
 
     def finalize_id_token(self, id_token: dict, token: dict, token_handler, request):
+        """
+        https://openid.net/specs/openid-connect-core-1_0.html#StandardClaims
+        """
         id_token["sub"] = user_id_to_str(request.user)
         id_token["iss"] = get_adapter().get_issuer()
         id_token["exp"] = id_token["iat"] + 5 * 60  # FIXME: hardcoded
@@ -190,6 +195,30 @@ class MyRequestValidator(RequestValidator):
         jwk_dict, private_key = jwkkit.load_jwk_from_pem(
             settings.IDP_OPENID_CONNECT_PRIVATE_KEYS[0]
         )
+        if "email" in request.scopes:
+            address = EmailAddress.objects.get_primary(request.user)
+            if address:
+                id_token.update(
+                    {
+                        "email": address.email,
+                        "email_verified": address.verified,
+                    }
+                )
+        if "profile" in request.scopes:
+            full_name = request.user.get_full_name()
+            last_name = getattr(request.user, "last_name", None)
+            first_name = getattr(request.user, "first_name", None)
+            username = user_username(request.user)
+            profile_claims = {
+                "name": full_name,
+                "given_name": first_name,
+                "family_name": last_name,
+                "preferred_username": username,
+            }
+            for claim_key, claim_value in profile_claims.items():
+                if claim_value:
+                    id_token[claim_key] = claim_value
+        get_adapter().populate_id_token(id_token, request.client, request.scopes)
         return jwt.encode(
             id_token, private_key, algorithm="RS256", headers={"kid": jwk_dict["kid"]}
         )
@@ -203,7 +232,8 @@ class MyRequestValidator(RequestValidator):
 
     def get_userinfo_claims(self, request):
         # FIXME
-        return {"sub": user_id_to_str(request.user)}
+        claims = {"sub": user_id_to_str(request.user)}
+        return claims
 
     def get_default_redirect_uri(self, client_id, request, *args, **kwargs):
         uris = request.client.get_redirect_uris()
