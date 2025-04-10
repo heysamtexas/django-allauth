@@ -1,5 +1,3 @@
-import json
-
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.contrib.sites.shortcuts import get_current_site
@@ -12,10 +10,9 @@ from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 from django.views.generic.edit import FormView
 
-from cryptography.hazmat.primitives.serialization import load_pem_private_key
-from jwt.algorithms import RSAAlgorithm
 from oauthlib.oauth2.rfc6749 import errors
 
+from allauth.account import app_settings as account_settings
 from allauth.account.internal.decorators import login_not_required
 from allauth.core.internal import jwkkit
 from allauth.core.internal.httpkit import add_query_params
@@ -65,7 +62,9 @@ configuration = ConfigurationView.as_view()
 @method_decorator(login_required, name="dispatch")
 class AuthorizeView(FormView):
     form_class = AuthorizeForm
-    template_name = "idp/openid_connect/authorize_form.html"
+    template_name = (
+        "idp/openid_connect/authorize_form." + account_settings.TEMPLATE_EXTENSION
+    )
 
     def dispatch(self, request, *args, **kwargs):
         if request.method == "GET":
@@ -79,7 +78,7 @@ class AuthorizeView(FormView):
                 )
             # Errors that should be shown to the user on the provider website
             except errors.FatalClientError as e:
-                return response_from_error(e)
+                return response_from_error(request, e)
             except errors.OAuth2Error as e:
                 return HttpResponseRedirect(e.in_uri(e.redirect_uri))
             if self._request_info["request"].client.skip_consent:
@@ -146,7 +145,7 @@ class AuthorizeView(FormView):
             return response_from_return(headers, body, status)
 
         except errors.FatalClientError as e:
-            return response_from_error(e)
+            return response_from_error(self.request, e)
 
     def get_context_data(self, **kwargs):
         ret = super().get_context_data(**kwargs)

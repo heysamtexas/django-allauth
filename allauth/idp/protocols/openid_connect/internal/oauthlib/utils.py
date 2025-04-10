@@ -1,9 +1,13 @@
 from typing import Tuple
 from urllib.parse import urlparse, urlunparse
 
-from django.http import HttpRequest, HttpResponse, HttpResponseBadRequest
+from django.http import HttpRequest, HttpResponse
+from django.shortcuts import render
 
 from oauthlib.common import quote, urlencode, urlencoded
+from oauthlib.oauth2.rfc6749.errors import OAuth2Error
+
+from allauth.account import app_settings as account_settings
 
 
 def get_uri(request: HttpRequest):
@@ -49,8 +53,10 @@ def response_from_return(headers, body, status):
     return response
 
 
-def response_from_error(e):
-    # FIXME: evil?
-    return HttpResponseBadRequest(
-        "Evil client is unable to send a proper request. Error is: " + e.description
+def response_from_error(request: HttpRequest, error: OAuth2Error) -> HttpResponse:
+    context = {"error": error}
+    return render(
+        request,
+        "idp/openid_connect/error." + account_settings.TEMPLATE_EXTENSION,
+        context,
     )
