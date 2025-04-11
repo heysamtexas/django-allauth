@@ -20,6 +20,7 @@ class AppSettings:
 
     @property
     def PRIVATE_KEYS(self) -> list[str]:
+        # FIXME: list for multiple, or move transition keys elsewhere?
         return self._setting("PRIVATE_KEYS", [])
 
 
