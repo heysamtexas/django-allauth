@@ -329,3 +329,14 @@ def test_implicit_grant_flow(auth_client, user, oidc_client, enable_cache):
         "token_type": ["Bearer"],
         "state": ["some-state"],
     }
+
+
+def test_userinfo(client, oidc_client, user, access_token_generator):
+    # Pass along ID token as hint
+    token, _ = access_token_generator(oidc_client, user, scopes=["openid"])
+    resp = client.get(
+        reverse("idp:openid_connect:userinfo")
+        + "?"
+        + urlencode({"access_token": token}),
+    )
+    assert resp.status_code == HTTPStatus.UNAUTHORIZED

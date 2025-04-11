@@ -213,6 +213,12 @@ class OAuthLibRequestValidator(RequestValidator):
         )
 
     def validate_bearer_token(self, token, scopes, request) -> bool:
+        if context.request.GET.get("access_token") == token:
+            # Supporting tokens in query params is considered bad practice, yet,
+            # oauthlib supports this. E.g., if access tokens are sent via URI
+            # query parameters, such tokens may leak to log files and the HTTP
+            # 'referer'.
+            return False
         if not token:
             return False
         instance = Token.objects.lookup(Token.Type.ACCESS_TOKEN, token)
