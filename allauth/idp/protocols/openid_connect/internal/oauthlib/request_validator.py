@@ -2,13 +2,11 @@ import uuid
 from datetime import timedelta
 from typing import List
 
-from django.core.exceptions import ValidationError
 from django.utils import timezone
 
 import jwt
 from oauthlib.openid import RequestValidator
 
-from allauth.account.adapter import get_adapter as get_account_adapter
 from allauth.core import context
 from allauth.core.internal import jwkkit
 from allauth.idp.protocols.openid_connect import app_settings
@@ -23,7 +21,7 @@ from allauth.idp.protocols.openid_connect.internal.oauthlib import (
 from allauth.idp.protocols.openid_connect.models import Client, Token
 
 
-class MyRequestValidator(RequestValidator):
+class OAuthLibRequestValidator(RequestValidator):
 
     def validate_client_id(self, client_id: str, request):
         client = Client.objects.filter(id=client_id).first()

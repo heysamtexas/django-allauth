@@ -20,7 +20,7 @@ from allauth.core.internal.httpkit import add_query_params
 from allauth.idp.protocols.openid_connect.adapter import get_adapter
 from allauth.idp.protocols.openid_connect.forms import AuthorizeForm
 from allauth.idp.protocols.openid_connect.internal.oauthlib.server import (
-    server,
+    get_server,
 )
 from allauth.idp.protocols.openid_connect.internal.oauthlib.utils import (
     convert_response,
@@ -73,7 +73,7 @@ class AuthorizeView(FormView):
             orequest = extract_params(self.request)
             try:
                 self._scopes, self._request_info = (
-                    server.validate_authorization_request(*orequest)
+                    get_server().validate_authorization_request(*orequest)
                 )
             # Errors that should be shown to the user on the provider website
             except errors.FatalClientError as e:
@@ -138,7 +138,7 @@ class AuthorizeView(FormView):
         credentials = {"user": self.request.user}
         credentials.update(self._request_info)
         try:
-            oresponse = server.create_authorization_response(
+            oresponse = get_server().create_authorization_response(
                 *orequest, scopes=scopes, credentials=credentials
             )
             return convert_response(*oresponse)
@@ -165,7 +165,7 @@ class TokenView(View):
 
     def post(self, request):
         orequest = extract_params(request)
-        oresponse = server.create_token_response(*orequest)
+        oresponse = get_server().create_token_response(*orequest)
         return convert_response(*oresponse)
 
 
@@ -177,7 +177,7 @@ class UserInfoView(View):
     def get(self, request):
         orequest = extract_params(request)
         try:
-            oresponse = server.create_userinfo_response(*orequest)
+            oresponse = get_server().create_userinfo_response(*orequest)
             return convert_response(*oresponse)
         except OAuth2Error as e:
             return respond_json_error(request, e)
@@ -206,7 +206,7 @@ jwks = JwksView.as_view()
 class RevokeView(View):
     def post(self, request, *args, **kwargs):
         orequest = extract_params(request)
-        oresponse = server.create_revocation_response(*orequest)
+        oresponse = get_server().create_revocation_response(*orequest)
         return convert_response(*oresponse)
 
 

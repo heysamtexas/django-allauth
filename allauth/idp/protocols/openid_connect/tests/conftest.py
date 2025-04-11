@@ -7,7 +7,7 @@ import pytest
 from allauth.core.context import request_context
 from allauth.idp.protocols.openid_connect.adapter import get_adapter
 from allauth.idp.protocols.openid_connect.internal.oauthlib.request_validator import (
-    MyRequestValidator,
+    OAuthLibRequestValidator,
 )
 from allauth.idp.protocols.openid_connect.models import Client, Token
 
@@ -28,7 +28,7 @@ def id_token_generator(rf):
     def f(client, user):
         with request_context(rf.get("/")):
             request = SimpleNamespace(client=client, user=user, scopes=["openid"])
-            return MyRequestValidator().finalize_id_token(
+            return OAuthLibRequestValidator().finalize_id_token(
                 {
                     "aud": client.id,
                     "iat": int(time.time()),
