@@ -1,4 +1,5 @@
 from http import HTTPStatus
+from unittest.mock import ANY
 from urllib.parse import parse_qs, urlparse
 
 from django.urls import reverse
@@ -246,3 +247,26 @@ def test_revoke(client, oidc_client, user, access_token_generator):
     assert resp.status_code == 200
     assert not Token.objects.filter(pk=instance.pk).exists()
     assert Token.objects.filter(pk=instance_to_keep.pk).exists()
+
+
+def test_client_credentials(client, oidc_client):
+    resp = client.post(
+        reverse("idp:openid_connect:token"),
+        data={
+            "client_id": oidc_client.id,
+            "client_secret": oidc_client.secret,
+            "scope": "profile email",
+            "grant_type": "client_credentials",
+        },
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data == {
+        "access_token": ANY,
+        "expires_in": 3600,
+        "scope": "profile email",
+        "token_type": "Bearer",
+    }
+    token = Token.objects.lookup(Token.Type.ACCESS_TOKEN, data["access_token"])
+    assert token.client == oidc_client
+    assert token.get_scopes() == ["profile", "email"]

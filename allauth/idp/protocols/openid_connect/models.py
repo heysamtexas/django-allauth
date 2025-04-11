@@ -128,7 +128,9 @@ class Token(models.Model):
     type = models.CharField(max_length=2, choices=Type.choices)
     hash = models.CharField(primary_key=True, max_length=255)
     client = models.ForeignKey(Client, on_delete=models.CASCADE)
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, blank=True, null=True
+    )
     data = models.JSONField(blank=True, null=True, default=None)
     created_at = models.DateTimeField(default=timezone.now)
     expires_at = models.DateTimeField(blank=True, null=True)
@@ -138,7 +140,9 @@ class Token(models.Model):
     # FIXME: composite primary key type, value?
 
     def __str__(self) -> str:
-        return f"{self.get_type_display()} for user #{self.user_id}"
+        if self.user_id:
+            return f"{self.get_type_display()} for user #{self.user_id}"
+        return self.get_type_display()
 
     def get_scopes(self) -> List[str]:
         return self.scopes.split()
