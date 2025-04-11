@@ -39,6 +39,9 @@ class ConfigurationView(View):
             "authorization_endpoint": build_absolute_uri(
                 request, reverse("idp:openid_connect:authorize")
             ),
+            "revocation_endpoint": build_absolute_uri(
+                request, reverse("idp:openid_connect:revoke")
+            ),
             "token_endpoint": build_absolute_uri(
                 request, reverse("idp:openid_connect:token")
             ),
