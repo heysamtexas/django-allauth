@@ -7,6 +7,7 @@ from django.http import HttpResponseRedirect, JsonResponse
 from django.urls import reverse
 from django.utils.decorators import method_decorator
 from django.views import View
+from django.views.decorators.clickjacking import xframe_options_deny
 from django.views.decorators.csrf import csrf_exempt
 from django.views.generic.edit import FormView
 
@@ -64,6 +65,7 @@ class ConfigurationView(View):
 configuration = ConfigurationView.as_view()
 
 
+@method_decorator(xframe_options_deny, name="dispatch")
 @method_decorator(login_required, name="dispatch")
 class AuthorizeView(FormView):
     form_class = AuthorizeForm
