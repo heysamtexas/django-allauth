@@ -41,6 +41,11 @@ urlpatterns = [
                                 name="authorize",
                             ),
                             path(
+                                "revoke",
+                                views.revoke,
+                                name="revoke",
+                            ),
+                            path(
                                 "userinfo",
                                 views.user_info,
                                 name="userinfo",

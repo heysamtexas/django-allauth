@@ -11,6 +11,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.generic.edit import FormView
 
 from oauthlib.oauth2.rfc6749 import errors
+from oauthlib.oauth2.rfc6749.errors import OAuth2Error
 
 from allauth.account import app_settings as account_settings
 from allauth.account.internal.decorators import login_not_required
@@ -22,9 +23,10 @@ from allauth.idp.protocols.openid_connect.internal.oauthlib.server import (
     server,
 )
 from allauth.idp.protocols.openid_connect.internal.oauthlib.utils import (
+    convert_response,
     extract_params,
-    response_from_error,
-    response_from_return,
+    respond_html_error,
+    respond_json_error,
 )
 from allauth.idp.protocols.openid_connect.models import Client
 from allauth.utils import build_absolute_uri
@@ -68,17 +70,14 @@ class AuthorizeView(FormView):
 
     def dispatch(self, request, *args, **kwargs):
         if request.method == "GET":
-            uri, http_method, body, headers = extract_params(self.request)
-
+            orequest = extract_params(self.request)
             try:
                 self._scopes, self._request_info = (
-                    server.validate_authorization_request(
-                        uri, http_method, body, headers
-                    )
+                    server.validate_authorization_request(*orequest)
                 )
             # Errors that should be shown to the user on the provider website
             except errors.FatalClientError as e:
-                return response_from_error(request, e)
+                return respond_html_error(request, e)
             except errors.OAuth2Error as e:
                 return HttpResponseRedirect(e.in_uri(e.redirect_uri))
             if self._request_info["request"].client.skip_consent:
@@ -134,18 +133,18 @@ class AuthorizeView(FormView):
         return ret
 
     def form_valid(self, form):
-        uri, http_method, body, headers = extract_params(self.request)
+        orequest = extract_params(self.request)
         scopes = form.cleaned_data["scopes"]
         credentials = {"user": self.request.user}
         credentials.update(self._request_info)
         try:
-            headers, body, status = server.create_authorization_response(
-                uri, http_method, body, headers, scopes, credentials
+            oresponse = server.create_authorization_response(
+                *orequest, scopes=scopes, credentials=credentials
             )
-            return response_from_return(headers, body, status)
+            return convert_response(*oresponse)
 
         except errors.FatalClientError as e:
-            return response_from_error(self.request, e)
+            return respond_html_error(self.request, e)
 
     def get_context_data(self, **kwargs):
         ret = super().get_context_data(**kwargs)
@@ -165,13 +164,9 @@ authorize = AuthorizeView.as_view()
 class TokenView(View):
 
     def post(self, request):
-        uri, http_method, body, headers = extract_params(request)
-        credentials = {}
-        headers, body, status = server.create_token_response(
-            uri, http_method, body, headers, credentials
-        )
-
-        return response_from_return(headers, body, status)
+        orequest = extract_params(request)
+        oresponse = server.create_token_response(*orequest)
+        return convert_response(*oresponse)
 
 
 token = TokenView.as_view()
@@ -180,11 +175,12 @@ token = TokenView.as_view()
 class UserInfoView(View):
 
     def get(self, request):
-        uri, http_method, body, headers = extract_params(request)
-        headers, body, status = server.create_userinfo_response(
-            uri, http_method, body, headers
-        )
-        return response_from_return(headers, body, status)
+        orequest = extract_params(request)
+        try:
+            oresponse = server.create_userinfo_response(*orequest)
+            return convert_response(*oresponse)
+        except OAuth2Error as e:
+            return respond_json_error(request, e)
 
 
 user_info = UserInfoView.as_view()
@@ -203,3 +199,15 @@ class JwksView(View):
 
 
 jwks = JwksView.as_view()
+
+
+@method_decorator(csrf_exempt, name="dispatch")
+@method_decorator(login_not_required, name="dispatch")
+class RevokeView(View):
+    def post(self, request, *args, **kwargs):
+        orequest = extract_params(request)
+        oresponse = server.create_revocation_response(*orequest)
+        return convert_response(*oresponse)
+
+
+revoke = RevokeView.as_view()

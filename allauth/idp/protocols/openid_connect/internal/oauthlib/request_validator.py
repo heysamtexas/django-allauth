@@ -7,12 +7,11 @@ from django.utils import timezone
 import jwt
 from oauthlib.openid import RequestValidator
 
-from allauth.account.models import EmailAddress
-from allauth.account.utils import user_username
 from allauth.core import context
 from allauth.core.internal import jwkkit
 from allauth.idp.protocols.openid_connect import app_settings
 from allauth.idp.protocols.openid_connect.adapter import get_adapter
+from allauth.idp.protocols.openid_connect.internal.claims import get_claims
 from allauth.idp.protocols.openid_connect.internal.clientkit import (
     is_redirect_uri_allowed,
 )
@@ -155,6 +154,8 @@ class MyRequestValidator(RequestValidator):
                     hash=adapter.hash_token(refresh_token),
                 )
             )
+        for token in tokens:
+            token.set_scopes(request.scopes)
         Token.objects.bulk_create(tokens)
 
     def invalidate_authorization_code(self, client_id, code, request, *args, **kwargs):
@@ -201,33 +202,10 @@ class MyRequestValidator(RequestValidator):
         https://openid.net/specs/openid-connect-core-1_0.html#StandardClaims
         """
         adapter = get_adapter()
-        id_token["sub"] = adapter.get_user_sub(request.client, request.user)
         id_token["iss"] = adapter.get_issuer()
         id_token["exp"] = id_token["iat"] + app_settings.ID_TOKEN_EXP
         id_token["jti"] = uuid.uuid4().hex
-        if "email" in request.scopes:
-            address = EmailAddress.objects.get_primary(request.user)
-            if address:
-                id_token.update(
-                    {
-                        "email": address.email,
-                        "email_verified": address.verified,
-                    }
-                )
-        if "profile" in request.scopes:
-            full_name = request.user.get_full_name()
-            last_name = getattr(request.user, "last_name", None)
-            first_name = getattr(request.user, "first_name", None)
-            username = user_username(request.user)
-            profile_claims = {
-                "name": full_name,
-                "given_name": first_name,
-                "family_name": last_name,
-                "preferred_username": username,
-            }
-            for claim_key, claim_value in profile_claims.items():
-                if claim_value:
-                    id_token[claim_key] = claim_value
+        id_token.update(get_claims(request.user, request.client, request.scopes))
         get_adapter().populate_id_token(id_token, request.client, request.scopes)
         jwk_dict, private_key = jwkkit.load_jwk_from_pem(app_settings.PRIVATE_KEYS[0])
         return jwt.encode(
@@ -235,16 +213,30 @@ class MyRequestValidator(RequestValidator):
         )
 
     def validate_bearer_token(self, token, scopes, request) -> bool:
+        if not token:
+            return False
         instance = Token.objects.lookup(Token.Type.ACCESS_TOKEN, token)
         if not instance:
             return False
+        granted_scopes = instance.get_scopes()
+        if not set(scopes).issubset(set(granted_scopes)):
+            return False
         request.user = instance.user
+        request.client = instance.client
+        request.scopes = granted_scopes
         return True
 
+    def revoke_token(self, token, token_type_hint, request, *args, **kwargs):
+        if token_type_hint == "access_token":
+            types = Token.Type.ACCESS_TOKEN
+        elif token_type_hint == "refresh_token":
+            types = Token.Type.REFRESH_TOKEN
+        else:
+            types = [Token.Type.ACCESS_TOKEN, Token.Type.REFRESH_TOKEN]
+        Token.objects.by_value(token).filter(type__in=types).delete()
+
     def get_userinfo_claims(self, request):
-        # FIXME
-        claims = {"sub": get_adapter().get_user_sub(request.client, request.user)}
-        return claims
+        return get_claims(request.user, request.client, request.scopes)
 
     def get_default_redirect_uri(self, client_id, request, *args, **kwargs):
         uris = request.client.get_redirect_uris()

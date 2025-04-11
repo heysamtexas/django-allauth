@@ -46,17 +46,26 @@ def extract_headers(request):
     return headers
 
 
-def response_from_return(headers, body, status):
+def convert_response(headers, body, status):
     response = HttpResponse(content=body, status=status)
     for k, v in headers.items():
         response[k] = v
     return response
 
 
-def response_from_error(request: HttpRequest, error: OAuth2Error) -> HttpResponse:
+def respond_html_error(request: HttpRequest, error: OAuth2Error) -> HttpResponse:
     context = {"error": error}
     return render(
         request,
         "idp/openid_connect/error." + account_settings.TEMPLATE_EXTENSION,
         context,
     )
+
+
+def respond_json_error(request: HttpRequest, error: OAuth2Error) -> HttpResponse:
+    response = HttpResponse(
+        error.json, status=error.status_code, content_type="application/json"
+    )
+    for k, v in error.headers.items():
+        response[k] = v
+    return response

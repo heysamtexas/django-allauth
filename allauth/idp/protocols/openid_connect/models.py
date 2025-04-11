@@ -110,10 +110,11 @@ class TokenQuerySet(models.query.QuerySet):
             Q(expires_at__isnull=True) | Q(expires_at__gt=timezone.now())
         )
 
+    def by_value(self, value: str):
+        return self.filter(hash=get_adapter().hash_token(value))
+
     def lookup(self, type, value):
-        return (
-            self.valid().filter(type=type, hash=get_adapter().hash_token(value)).first()
-        )
+        return self.valid().by_value(value).filter(type=type).first()
 
 
 class Token(models.Model):
@@ -138,3 +139,11 @@ class Token(models.Model):
 
     def __str__(self) -> str:
         return f"{self.get_type_display()} for user #{self.user_id}"
+
+    def get_scopes(self) -> List[str]:
+        return self.scopes.split()
+
+    def set_scopes(self, scopes: List[str]):
+        if isinstance(scopes, str):
+            raise ValueError(scopes)
+        self.scopes = "\n".join(scopes)

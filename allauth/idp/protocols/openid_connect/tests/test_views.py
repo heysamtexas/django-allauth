@@ -8,6 +8,9 @@ import jwt
 import pytest
 from pytest_django.asserts import assertTemplateUsed
 
+from allauth.idp.protocols.openid_connect.adapter import get_adapter
+from allauth.idp.protocols.openid_connect.models import Token
+
 
 def test_cancel_authorization(auth_client, oidc_client):
     uri = oidc_client.get_redirect_uris()[0]
@@ -199,3 +202,47 @@ def test_authorize_id_token_hint_mismatch(
     assert params["error_description"] == [
         "Session user does not match client supplied user."
     ]
+
+
+def test_userinfo_bad_token(client, oidc_client, user):
+    # Pass along ID token as hint
+    resp = client.get(reverse("idp:openid_connect:userinfo"))
+    assert resp.status_code == HTTPStatus.UNAUTHORIZED
+    assert resp.json() == {
+        "error": "invalid_token",
+        "error_description": "The access token provided is expired, revoked, malformed, or invalid for other reasons.",
+    }
+
+
+@pytest.mark.parametrize("scopes", [("openid",), ("openid", "email")])
+def test_userinfo(client, oidc_client, user, access_token_generator, scopes):
+    # Pass along ID token as hint
+    token, _ = access_token_generator(oidc_client, user, scopes=scopes)
+    resp = client.get(
+        reverse("idp:openid_connect:userinfo"),
+        HTTP_AUTHORIZATION=f"Bearer {token}",
+    )
+    assert resp.status_code == HTTPStatus.OK
+    data = resp.json()
+    assert data["sub"] == get_adapter().get_user_sub(oidc_client, user)
+    if "email" in scopes:
+        assert data["email"] == user.email
+        assert data["email_verified"] == True
+    else:
+        assert "email" not in data
+
+
+def test_revoke(client, oidc_client, user, access_token_generator):
+    token, instance = access_token_generator(oidc_client, user)
+    _, instance_to_keep = access_token_generator(oidc_client, user)
+    resp = client.post(
+        reverse("idp:openid_connect:revoke"),
+        data={
+            "client_id": oidc_client.id,
+            "client_secret": oidc_client.secret,
+            "token": token,
+        },
+    )
+    assert resp.status_code == 200
+    assert not Token.objects.filter(pk=instance.pk).exists()
+    assert Token.objects.filter(pk=instance_to_keep.pk).exists()
