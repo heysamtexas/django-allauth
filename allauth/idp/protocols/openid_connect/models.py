@@ -22,6 +22,16 @@ def default_client_secret() -> str:
     return adapter.encrypt(client_secret)
 
 
+def _values_from_text(text) -> list[str]:
+    return list(filter(None, [s.strip() for s in text.split("\n")]))
+
+
+def _values_to_text(values) -> str:
+    if isinstance(values, str):
+        raise ValueError(values)
+    return "\n".join(values)
+
+
 class Client(models.Model):
     class GrantType(models.TextChoices):
         AUTHORIZATION_CODE = "authorization_code", _("Authorization code")
@@ -63,36 +73,28 @@ class Client(models.Model):
         verbose_name_plural = _("clients")
 
     def get_redirect_uris(self) -> List[str]:
-        return self.redirect_uris.split()
+        return _values_from_text(self.redirect_uris)
 
     def set_redirect_uris(self, uris: List[str]):
-        if isinstance(uris, str):
-            raise ValueError(uris)
-        self.redirect_uris = "\n".join(uris)
+        self.redirect_uris = _values_to_text(uris)
 
     def get_scopes(self) -> List[str]:
-        return self.scopes.split()
+        return _values_from_text(self.scopes)
 
     def set_scopes(self, scopes: List[str]):
-        if isinstance(scopes, str):
-            raise ValueError(scopes)
-        self.scopes = "\n".join(scopes)
+        self.scopes = _values_to_text(scopes)
 
     def get_response_types(self) -> List[str]:
-        return self.response_types.split()
+        return _values_from_text(self.response_types)
 
     def set_response_types(self, response_types: List[str]):
-        if isinstance(response_types, str):
-            raise ValueError(response_types)
-        self.response_types = "\n".join(response_types)
+        self.response_types = _values_to_text(response_types)
 
     def get_grant_types(self) -> List[str]:
-        return self.grant_types.split()
+        return _values_from_text(self.grant_types)
 
     def set_grant_types(self, grant_types: List[str]):
-        if isinstance(grant_types, str):
-            raise ValueError(grant_types)
-        self.grant_types = "\n".join(grant_types)
+        self.grant_types = _values_to_text(grant_types)
 
     def get_secret(self) -> str:
         return get_adapter().decrypt(self.secret)
@@ -145,9 +147,7 @@ class Token(models.Model):
         return self.get_type_display()
 
     def get_scopes(self) -> List[str]:
-        return self.scopes.split()
+        return _values_from_text(self.scopes)
 
     def set_scopes(self, scopes: List[str]):
-        if isinstance(scopes, str):
-            raise ValueError(scopes)
-        self.scopes = "\n".join(scopes)
+        self.scopes = _values_to_text(scopes)
