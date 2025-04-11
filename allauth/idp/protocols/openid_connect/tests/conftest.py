@@ -18,7 +18,7 @@ def oidc_client(db):
     client.set_redirect_uris(["https://client/callback"])
     client.set_scopes(["profile", "openid", "email"])
     client.set_grant_types(["authorization_code", "client_credentials", "password"])
-    client.set_response_types(["code"])
+    client.set_response_types(["code", "token"])
     client.save()
     return client
 

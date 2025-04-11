@@ -291,3 +291,41 @@ def test_password_grant_is_blocked(client, oidc_client, user, user_password):
         "error": "invalid_grant",
         "error_description": "Invalid credentials given.",
     }
+
+
+def test_implicit_grant_flow(auth_client, user, oidc_client, enable_cache):
+    scopes = ["openid", "profile"]
+    resp = auth_client.get(
+        reverse("idp:openid_connect:authorize")
+        + "?"
+        + urlencode(
+            {
+                "client_id": oidc_client.id,
+                "response_type": "token",
+                "scope": " ".join(scopes),
+                "nonce": "some-nonce",
+                "state": "some-state",
+            }
+        )
+    )
+    assert resp.status_code == HTTPStatus.OK
+    assertTemplateUsed(resp, "idp/openid_connect/authorize_form.html")
+    resp = auth_client.post(
+        reverse("idp:openid_connect:authorize"),
+        {
+            "scopes": scopes,
+            "action": "grant",
+            "request": resp.context["form"]["request"].value(),
+        },
+    )
+    # "https://client/callback#access_token=baI5uc9m5JWc6afKqaZ9eymeOrq1hz&expires_in=3600&token_type=Bearer&scope=openid+profile&state=some-state"
+    assert resp.status_code == HTTPStatus.FOUND
+    parts = urlparse(resp["location"])
+    data = parse_qs(parts.fragment)
+    assert data == {
+        "access_token": ANY,
+        "expires_in": ["3600"],
+        "scope": ["openid profile"],
+        "token_type": ["Bearer"],
+        "state": ["some-state"],
+    }
