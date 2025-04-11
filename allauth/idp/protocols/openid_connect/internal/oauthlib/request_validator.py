@@ -245,9 +245,9 @@ class OAuthLibRequestValidator(RequestValidator):
         return get_claims(request.user, request.client, request.scopes)
 
     def get_default_redirect_uri(self, client_id, request, *args, **kwargs):
-        uris = request.client.get_redirect_uris()
-        if uris:
-            return uris[0]
+        # https://openid.net/specs/openid-financial-api-part-1-1_0.html#section-5.2.2
+        # 9. shall require the redirect_uri in the authorization request;
+        # So, don't support a default.
         return None
 
     def _decode_id_token(self, client, id_token: str):
