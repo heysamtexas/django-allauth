@@ -12,4 +12,6 @@ The following OpenID Connect functionality is supported:
 
 - Client credentials grant.
 
-- Password grant (legacy grant type, not recommended).
+Functionality intentionally not supported:
+
+- Password grant: This is a legacy flow, not recommended. There is no support for e.g. MFA.

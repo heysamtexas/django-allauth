@@ -265,7 +265,6 @@ class MyRequestValidator(RequestValidator):
         """
         Note that this bypasses MFA, which is why the password grant is not
         recommended.
-        """
         try:
             user = get_account_adapter().authenticate(
                 context.request, username=username, password=password
@@ -277,3 +276,5 @@ class MyRequestValidator(RequestValidator):
                 return False
             request.user = user
             return True
+        """
+        return False
