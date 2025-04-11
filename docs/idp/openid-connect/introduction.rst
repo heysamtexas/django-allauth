@@ -11,3 +11,5 @@ The following OpenID Connect functionality is supported:
 - Authorization code grant.
 
 - Client credentials grant.
+
+- Password grant (legacy grant type, not recommended).

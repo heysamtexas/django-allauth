@@ -2,11 +2,13 @@ import uuid
 from datetime import timedelta
 from typing import List
 
+from django.core.exceptions import ValidationError
 from django.utils import timezone
 
 import jwt
 from oauthlib.openid import RequestValidator
 
+from allauth.account.adapter import get_adapter as get_account_adapter
 from allauth.core import context
 from allauth.core.internal import jwkkit
 from allauth.idp.protocols.openid_connect import app_settings
@@ -203,7 +205,7 @@ class MyRequestValidator(RequestValidator):
         """
         adapter = get_adapter()
         id_token["iss"] = adapter.get_issuer()
-        id_token["exp"] = id_token["iat"] + app_settings.ID_TOKEN_EXP
+        id_token["exp"] = id_token["iat"] + app_settings.ID_TOKEN_EXPIRES_IN
         id_token["jti"] = uuid.uuid4().hex
         id_token.update(get_claims(request.user, request.client, request.scopes))
         get_adapter().populate_id_token(id_token, request.client, request.scopes)
@@ -258,3 +260,20 @@ class MyRequestValidator(RequestValidator):
                 "verify_exp": True,
             },
         )
+
+    def validate_user(self, username, password, client, request, *args, **kwargs):
+        """
+        Note that this bypasses MFA, which is why the password grant is not
+        recommended.
+        """
+        try:
+            user = get_account_adapter().authenticate(
+                context.request, username=username, password=password
+            )
+        except ValidationError:
+            return False
+        else:
+            if not user:
+                return False
+            request.user = user
+            return True

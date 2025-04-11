@@ -270,3 +270,30 @@ def test_client_credentials(client, oidc_client):
     token = Token.objects.lookup(Token.Type.ACCESS_TOKEN, data["access_token"])
     assert token.client == oidc_client
     assert token.get_scopes() == ["profile", "email"]
+
+
+def test_password_grant(client, oidc_client, user, user_password):
+    resp = client.post(
+        reverse("idp:openid_connect:token"),
+        data={
+            "client_id": oidc_client.id,
+            "client_secret": oidc_client.secret,
+            "username": user.username,
+            "password": user_password,
+            "scope": "profile email",
+            "grant_type": "password",
+        },
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data == {
+        "access_token": ANY,
+        "refresh_token": ANY,
+        "expires_in": 3600,
+        "scope": "profile email",
+        "token_type": "Bearer",
+    }
+    token = Token.objects.lookup(Token.Type.ACCESS_TOKEN, data["access_token"])
+    assert token.client == oidc_client
+    assert token.get_scopes() == ["profile", "email"]
+    assert token.user == user

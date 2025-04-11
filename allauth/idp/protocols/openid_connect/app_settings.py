@@ -15,13 +15,17 @@ class AppSettings:
         )
 
     @property
-    def ID_TOKEN_EXP(self) -> int:
+    def ID_TOKEN_EXPIRES_IN(self) -> int:
         return 5 * 60
 
     @property
     def PRIVATE_KEYS(self) -> list[str]:
         # FIXME: list for multiple, or move transition keys elsewhere?
         return self._setting("PRIVATE_KEYS", [])
+
+    @property
+    def ACCESS_TOKEN_EXPIRES_IN(self) -> int:
+        return 3600
 
 
 _app_settings = AppSettings("IDP_OPENID_CONNECT_")
