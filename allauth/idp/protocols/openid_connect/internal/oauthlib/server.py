@@ -9,7 +9,10 @@ from allauth.idp.protocols.openid_connect.internal.oauthlib.request_validator im
 
 
 def generate_token(request) -> str:
-    return secrets.token_hex(20)
+    # oauch.io -- at 20, we get:
+    #    Out of 11 valid authorization responses, the
+    #    average calculated entropy for the access tokens was 144,3 (±7,1) bits
+    return secrets.token_hex(25)
 
 
 class OAuthLibServer(Server):
