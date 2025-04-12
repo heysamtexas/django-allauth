@@ -72,7 +72,7 @@ configuration = ConfigurationView.as_view()
 
 @method_decorator(xframe_options_deny, name="dispatch")
 @method_decorator(csrf_exempt, name="dispatch")
-@method_decorator(login_required, name="dispatch")
+@method_decorator(login_not_required, name="dispatch")
 class AuthorizeView(FormView):
     form_class = AuthorizeForm
     template_name = (
@@ -80,6 +80,9 @@ class AuthorizeView(FormView):
     )
 
     def get(self, request, *args, **kwargs):
+        response = self._login_required(request)
+        if response:
+            return response
         orequest = extract_params(self.request)
         try:
             self._scopes, self._request_info = (
@@ -100,6 +103,10 @@ class AuthorizeView(FormView):
             return HttpResponseRedirect(
                 reverse("idp:openid_connect:authorize") + "?" + request.POST.urlencode()
             )
+        response = self._login_required(request)
+        if response:
+            return response
+
         # This view is CSRF exempt, but, if this is not a client initial POST
         # request, we do want a properly CSRF protected view.
         reason = CsrfViewMiddleware(get_response=lambda req: None).process_view(
@@ -116,6 +123,11 @@ class AuthorizeView(FormView):
         if request.POST.get("action") != "grant":
             return self._respond_with_access_denied()
         return super().post(request, *args, **kwargs)
+
+    def _login_required(self, request):
+        if request.user.is_authenticated:
+            return None
+        return login_required()(None)(request)
 
     def _skip_consent(self):
         scopes = self._request_info["request"].scopes

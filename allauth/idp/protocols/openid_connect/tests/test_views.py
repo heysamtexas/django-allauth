@@ -371,6 +371,30 @@ def test_authorization_post_redirects_to_get(auth_client):
     ) + "?" + urlencode(payload)
 
 
+def test_authorization_post_redirects_anon_to_get(db, client):
+    payload = {
+        "client_id": "c123",
+        "response_type": "code",
+        "scope": "openid",
+        "nonce": "some-nonce",
+        "state": "some-state",
+    }
+    resp = client.post(
+        reverse("idp:openid_connect:authorize"), data=payload, follow=True
+    )
+    assert resp.status_code == HTTPStatus.OK
+    url = reverse("idp:openid_connect:authorize") + "?" + urlencode(payload)
+    assert resp.redirect_chain == [
+        (url, HTTPStatus.FOUND),
+        (
+            reverse("account_login")
+            + "?"
+            + urlencode({"next": url}).replace("%2F", "/"),
+            HTTPStatus.FOUND,
+        ),
+    ]
+
+
 def test_authorization_post_is_csrf_protected(user):
     client = Client(enforce_csrf_checks=True)
     client.force_login(user)
