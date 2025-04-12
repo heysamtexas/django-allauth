@@ -73,32 +73,33 @@ class AuthorizeView(FormView):
         "idp/openid_connect/authorize_form." + account_settings.TEMPLATE_EXTENSION
     )
 
-    def dispatch(self, request, *args, **kwargs):
-        if request.method == "GET":
-            orequest = extract_params(self.request)
-            try:
-                self._scopes, self._request_info = (
-                    get_server().validate_authorization_request(*orequest)
-                )
-            # Errors that should be shown to the user on the provider website
-            except errors.FatalClientError as e:
-                return respond_html_error(request, e)
-            except errors.OAuth2Error as e:
-                return HttpResponseRedirect(e.in_uri(e.redirect_uri))
-            if self._request_info["request"].client.skip_consent:
-                return self._skip_consent()
-        elif request.method == "POST":
-            signed_request_info = request.POST.get("request")
-            try:
-                signer = Signer()
-                self._scopes, self._request_info = signer.unsign_object(
-                    signed_request_info
-                )
-            except BadSignature:
-                raise PermissionDenied
-            if request.POST.get("action") != "grant":
-                return self._respond_with_access_denied()
-        return super().dispatch(request, *args, **kwargs)
+    def get(self, request, *args, **kwargs):
+        orequest = extract_params(self.request)
+        try:
+            self._scopes, self._request_info = (
+                get_server().validate_authorization_request(*orequest)
+            )
+        # Errors that should be shown to the user on the provider website
+        except errors.FatalClientError as e:
+            return respond_html_error(request, e)
+        except errors.OAuth2Error as e:
+            return HttpResponseRedirect(e.in_uri(e.redirect_uri))
+        if self._request_info["request"].client.skip_consent:
+            return self._skip_consent()
+        return super().get(request, *args, **kwargs)
+
+    def post(self, request, *args, **kwargs):
+        signed_request_info = request.POST.get("request")
+        if not signed_request_info:
+            pass
+        try:
+            signer = Signer()
+            self._scopes, self._request_info = signer.unsign_object(signed_request_info)
+        except BadSignature:
+            raise PermissionDenied
+        if request.POST.get("action") != "grant":
+            return self._respond_with_access_denied()
+        return super().post(request, *args, **kwargs)
 
     def _skip_consent(self):
         scopes = self._request_info["request"].scopes

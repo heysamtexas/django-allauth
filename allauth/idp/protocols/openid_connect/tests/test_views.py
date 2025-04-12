@@ -14,7 +14,7 @@ from allauth.idp.protocols.openid_connect.models import Token
 
 
 def test_cancel_authorization(auth_client, oidc_client):
-    uri = oidc_client.get_redirect_uris()[0]
+    redirect_uri = oidc_client.get_redirect_uris()[0]
     resp = auth_client.get(
         reverse("idp:openid_connect:authorize")
         + "?"
@@ -22,6 +22,7 @@ def test_cancel_authorization(auth_client, oidc_client):
             {
                 "client_id": oidc_client.id,
                 "response_type": "code",
+                "redirect_uri": redirect_uri,
             }
         )
     )
@@ -34,7 +35,7 @@ def test_cancel_authorization(auth_client, oidc_client):
         },
     )
     assert resp.status_code == HTTPStatus.FOUND
-    assert resp["location"] == f"{uri}?error=access_denied"
+    assert resp["location"] == f"{redirect_uri}?error=access_denied"
 
 
 @pytest.mark.parametrize(
@@ -46,13 +47,14 @@ def test_cancel_authorization(auth_client, oidc_client):
     ],
 )
 def test_authorization_code_flow(auth_client, user, oidc_client, enable_cache, scopes):
-    uri = oidc_client.get_redirect_uris()[0]
+    redirect_uri = oidc_client.get_redirect_uris()[0]
     resp = auth_client.get(
         reverse("idp:openid_connect:authorize")
         + "?"
         + urlencode(
             {
                 "client_id": oidc_client.id,
+                "redirect_uri": redirect_uri,
                 "response_type": "code",
                 "scope": " ".join(scopes),
                 "nonce": "some-nonce",
@@ -72,7 +74,7 @@ def test_authorization_code_flow(auth_client, user, oidc_client, enable_cache, s
     )
     assert resp.status_code == HTTPStatus.FOUND
     redirected_uri = resp["location"]
-    assert redirected_uri.startswith(uri)
+    assert redirected_uri.startswith(redirected_uri)
     parts = urlparse(redirected_uri)
     params = parse_qs(parts.query)
     code = params["code"][0]
@@ -83,6 +85,7 @@ def test_authorization_code_flow(auth_client, user, oidc_client, enable_cache, s
             "grant_type": "authorization_code",
             "client_id": oidc_client.id,
             "client_secret": oidc_client.get_secret(),
+            "redirect_uri": redirect_uri,
         },
     )
     assert resp.status_code == HTTPStatus.OK
@@ -116,7 +119,7 @@ def test_authorization_code_flow_skip_consent(
 ):
     oidc_client.skip_consent = True
     oidc_client.save()
-    uri = oidc_client.get_redirect_uris()[0]
+    redirect_uri = oidc_client.get_redirect_uris()[0]
     resp = auth_client.get(
         reverse("idp:openid_connect:authorize")
         + "?"
@@ -127,12 +130,13 @@ def test_authorization_code_flow_skip_consent(
                 "scope": "openid profile email",
                 "nonce": "some-nonce",
                 "state": "some-state",
+                "redirect_uri": redirect_uri,
             }
         )
     )
     assert resp.status_code == HTTPStatus.FOUND
     redirected_uri = resp["location"]
-    assert redirected_uri.startswith(uri)
+    assert redirected_uri.startswith(redirect_uri)
     parts = urlparse(redirected_uri)
     params = parse_qs(parts.query)
     code = params["code"][0]
@@ -143,6 +147,7 @@ def test_authorization_code_flow_skip_consent(
             "grant_type": "authorization_code",
             "client_id": oidc_client.id,
             "client_secret": oidc_client.get_secret(),
+            "redirect_uri": redirect_uri,
         },
     )
     assert resp.status_code == HTTPStatus.OK
@@ -160,6 +165,7 @@ def test_authorization_code_flow_skip_consent(
 def test_authorize_id_token_hint_match(
     user, id_token_generator, oidc_client, auth_client, user_factory
 ):
+    redirect_uri = oidc_client.get_redirect_uris()[0]
     # Pass along ID token as hint
     resp = auth_client.get(
         reverse("idp:openid_connect:authorize")
@@ -172,6 +178,7 @@ def test_authorize_id_token_hint_match(
                 "scope": "openid",
                 "nonce": "some-nonce",
                 "state": "some-state",
+                "redirect_uri": redirect_uri,
             }
         )
     )
@@ -181,6 +188,7 @@ def test_authorize_id_token_hint_match(
 def test_authorize_id_token_hint_mismatch(
     user, id_token_generator, oidc_client, auth_client, user_factory
 ):
+    redirect_uri = oidc_client.get_redirect_uris()[0]
     # Pass along ID token as hint
     resp = auth_client.get(
         reverse("idp:openid_connect:authorize")
@@ -190,6 +198,7 @@ def test_authorize_id_token_hint_mismatch(
                 "client_id": oidc_client.id,
                 "id_token_hint": id_token_generator(oidc_client, user_factory()),
                 "response_type": "code",
+                "redirect_uri": redirect_uri,
                 "scope": "openid",
                 "nonce": "some-nonce",
                 "state": "some-state",
@@ -294,6 +303,7 @@ def test_password_grant_is_blocked(client, oidc_client, user, user_password):
 
 
 def test_implicit_grant_flow(auth_client, user, oidc_client, enable_cache):
+    redirect_uri = oidc_client.get_redirect_uris()[0]
     scopes = ["openid", "profile"]
     resp = auth_client.get(
         reverse("idp:openid_connect:authorize")
@@ -305,6 +315,7 @@ def test_implicit_grant_flow(auth_client, user, oidc_client, enable_cache):
                 "scope": " ".join(scopes),
                 "nonce": "some-nonce",
                 "state": "some-state",
+                "redirect_uri": redirect_uri,
             }
         )
     )
@@ -331,7 +342,9 @@ def test_implicit_grant_flow(auth_client, user, oidc_client, enable_cache):
     }
 
 
-def test_userinfo(client, oidc_client, user, access_token_generator):
+def test_userinfo_access_token_as_query(
+    client, oidc_client, user, access_token_generator
+):
     # Pass along ID token as hint
     token, _ = access_token_generator(oidc_client, user, scopes=["openid"])
     resp = client.get(
