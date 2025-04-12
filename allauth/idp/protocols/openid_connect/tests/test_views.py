@@ -2,6 +2,7 @@ from http import HTTPStatus
 from unittest.mock import ANY
 from urllib.parse import parse_qs, urlparse
 
+from django.test import Client
 from django.urls import reverse
 from django.utils.http import urlencode
 
@@ -353,3 +354,30 @@ def test_userinfo_access_token_as_query(
         + urlencode({"access_token": token}),
     )
     assert resp.status_code == HTTPStatus.UNAUTHORIZED
+
+
+def test_authorization_post_redirects_to_get(auth_client):
+    payload = {
+        "client_id": "c123",
+        "response_type": "code",
+        "scope": "openid",
+        "nonce": "some-nonce",
+        "state": "some-state",
+    }
+    resp = auth_client.post(reverse("idp:openid_connect:authorize"), data=payload)
+    assert resp.status_code == HTTPStatus.FOUND
+    assert resp["location"] == reverse(
+        "idp:openid_connect:authorize"
+    ) + "?" + urlencode(payload)
+
+
+def test_authorization_post_is_csrf_protected(user):
+    client = Client(enforce_csrf_checks=True)
+    client.force_login(user)
+    payload = {
+        "request": "dummy",
+        "scopes": "openid",
+    }
+    resp = client.post(reverse("idp:openid_connect:authorize"), data=payload)
+    assert resp.status_code == HTTPStatus.FORBIDDEN
+    assert b"CSRF Failed" in resp.content

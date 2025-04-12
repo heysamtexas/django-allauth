@@ -3,7 +3,12 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.sites.shortcuts import get_current_site
 from django.core.exceptions import PermissionDenied
 from django.core.signing import BadSignature, Signer
-from django.http import HttpResponseRedirect, JsonResponse
+from django.http import (
+    HttpResponseForbidden,
+    HttpResponseRedirect,
+    JsonResponse,
+)
+from django.middleware.csrf import CsrfViewMiddleware
 from django.urls import reverse
 from django.utils.decorators import method_decorator
 from django.views import View
@@ -66,6 +71,7 @@ configuration = ConfigurationView.as_view()
 
 
 @method_decorator(xframe_options_deny, name="dispatch")
+@method_decorator(csrf_exempt, name="dispatch")
 @method_decorator(login_required, name="dispatch")
 class AuthorizeView(FormView):
     form_class = AuthorizeForm
@@ -91,7 +97,17 @@ class AuthorizeView(FormView):
     def post(self, request, *args, **kwargs):
         signed_request_info = request.POST.get("request")
         if not signed_request_info:
-            pass
+            return HttpResponseRedirect(
+                reverse("idp:openid_connect:authorize") + "?" + request.POST.urlencode()
+            )
+        # This view is CSRF exempt, but, if this is not a client initial POST
+        # request, we do want a properly CSRF protected view.
+        reason = CsrfViewMiddleware(get_response=lambda req: None).process_view(
+            request, None, (), {}
+        )
+        if reason:
+            return HttpResponseForbidden(f"CSRF Failed: {reason}")
+
         try:
             signer = Signer()
             self._scopes, self._request_info = signer.unsign_object(signed_request_info)
