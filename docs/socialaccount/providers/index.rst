@@ -90,6 +90,7 @@ Provider Specifics
    line
    linkedin
    mailchimp
+   mailcow
    mediawiki
    microsoft
    miro

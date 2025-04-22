@@ -133,6 +133,7 @@ INSTALLED_APPS = (
     "allauth.socialaccount.providers.line",
     "allauth.socialaccount.providers.linkedin_oauth2",
     "allauth.socialaccount.providers.mailchimp",
+    "allauth.socialaccount.providers.mailcow",
     "allauth.socialaccount.providers.mailru",
     "allauth.socialaccount.providers.mediawiki",
     "allauth.socialaccount.providers.meetup",

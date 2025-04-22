@@ -1,3 +1,18 @@
+xx.x.x (2025-??-??)
+*******************
+
+Note worthy changes
+-------------------
+
+- Added support for Mailcow OAuth2.
+
+
+Fixes
+-----
+
+- xxx
+
+
 65.7.0 (2025-04-03)
 *******************
 
