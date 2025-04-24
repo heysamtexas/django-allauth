@@ -54,6 +54,44 @@ class OpenIDConnectProvider(OAuth2Provider):
             kwargs={"provider_id": self.app.provider_id},
         )
 
+    def get_auth_params(self):
+        """
+        Expand the dictionary with additional optional parameters
+        for OpenID Connect's authentication request.
+        """
+        ret = super().get_auth_params()
+
+        if "display" in self.app.settings:
+            display = self.app.settings["display"]
+            if not display:
+                raise ValueError("OpenID Connect display value cannot be empty string.")
+
+            if display not in ("page", "popup", "touch", "wap"):
+                raise ValueError(f"Invalid OpenID Connect display value: {display}")
+
+            ret["display"] = display
+
+        if "prompt" in self.app.settings:
+            prompt = self.app.settings["prompt"]
+            if not prompt:
+                raise ValueError("OpenID Connect prompt value cannot be empty string.")
+
+            for prompt_token in prompt.split():
+                if prompt_token not in ("none", "login", "consent", "select_account"):
+                    raise ValueError(
+                        f"Invalid OpenID Connect prompt value: {prompt_token}"
+                    )
+
+            ret["prompt"] = self.app.settings["prompt"]
+
+        if "max_age" in self.app.settings:
+            max_age = int(self.app.settings["max_age"])
+
+            if max_age < 0:
+                raise ValueError("OpenID Connect prompt max_age cannot be negative.")
+
+        return ret
+
     @property
     def token_auth_method(self):
         return self.app.settings.get("token_auth_method")
