@@ -52,11 +52,14 @@ The OpenID Connect callback URL for each configured server is at
 Authentication Request's Optional Parameters
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Some optional parameters can be provided.
+Some optional parameters defined in
+`OpenID Connect Core 1.0 <https://openid.net/specs/openid-connect-core-1_0.html>`_'s
+`Authentication Request sectiont <https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest>`_
+can be provided as a dictionary under the key ``authorization_parameters``.
 
 .. attention::
 
-    Providers might not implement support to optional parameters.
+    Some providers might not support each of these parameters.
 
 .. code-block:: python
 
@@ -70,7 +73,9 @@ Some optional parameters can be provided.
                     "secret": "your.service.secret",
                     "settings": {
                         "server_url": "https://my.server.example.com",
-                        "prompt": "login",
+                        "authorization_parameters": {
+                          "prompt": "login",
+                        }
                     },
                 },
             ]
