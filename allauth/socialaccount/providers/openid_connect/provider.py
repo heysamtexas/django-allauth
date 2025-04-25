@@ -87,7 +87,7 @@ class OpenIDConnectProvider(OAuth2Provider):
         max_age = self.app.settings.get("authorization_parameters", {}).get("max_age")
         if max_age is not None:
             if max_age < 0:
-                raise ValueError("OpenID Connect prompt max_age cannot be negative.")
+                raise ValueError("OpenID Connect max_age cannot be negative.")
 
             ret["max_age"] = max_age
 
