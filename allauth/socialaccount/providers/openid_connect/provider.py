@@ -61,8 +61,8 @@ class OpenIDConnectProvider(OAuth2Provider):
         """
         ret = super().get_auth_params()
 
-        if "display" in self.app.settings:
-            display = self.app.settings["display"]
+        display = self.app.settings.get("authorization_parameters", {}).get("display")
+        if display is not None:
             if not display:
                 raise ValueError("OpenID Connect display value cannot be empty string.")
 
@@ -71,8 +71,8 @@ class OpenIDConnectProvider(OAuth2Provider):
 
             ret["display"] = display
 
-        if "prompt" in self.app.settings:
-            prompt = self.app.settings["prompt"]
+        prompt = self.app.settings.get("authorization_parameters", {}).get("prompt")
+        if prompt is not None:
             if not prompt:
                 raise ValueError("OpenID Connect prompt value cannot be empty string.")
 
@@ -84,9 +84,8 @@ class OpenIDConnectProvider(OAuth2Provider):
 
             ret["prompt"] = prompt
 
-        if "max_age" in self.app.settings:
-            max_age = int(self.app.settings["max_age"])
-
+        max_age = self.app.settings.get("authorization_parameters", {}).get("max_age")
+        if max_age is not None:
             if max_age < 0:
                 raise ValueError("OpenID Connect prompt max_age cannot be negative.")
 
