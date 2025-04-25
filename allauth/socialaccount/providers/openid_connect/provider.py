@@ -61,6 +61,8 @@ class OpenIDConnectProvider(OAuth2Provider):
         """
         ret = super().get_auth_params()
 
+        # nonce is not handle here because it might have been configured in the parent.
+
         display = self.app.settings.get("authorization_parameters", {}).get("display")
         if display is not None:
             if not display:
@@ -90,6 +92,30 @@ class OpenIDConnectProvider(OAuth2Provider):
                 raise ValueError("OpenID Connect max_age cannot be negative.")
 
             ret["max_age"] = max_age
+
+        ui_locales = self.app.settings.get("authorization_parameters", {}).get(
+            "ui_locales"
+        )
+        if ui_locales is not None:
+            raise ValueError("OpenID Connect ui_locales is not implemented.")
+
+        id_token_hint = self.app.settings.get("authorization_parameters", {}).get(
+            "id_token_hint"
+        )
+        if id_token_hint is not None:
+            raise ValueError("OpenID Connect id_token_hint is not implemented.")
+
+        login_hint = self.app.settings.get("authorization_parameters", {}).get(
+            "login_hint"
+        )
+        if login_hint is not None:
+            raise ValueError("OpenID Connect login_hint is not implemented.")
+
+        acr_values = self.app.settings.get("authorization_parameters", {}).get(
+            "acr_values"
+        )
+        if acr_values is not None:
+            raise ValueError("OpenID Connect acr_values is not implemented.")
 
         return ret
 
