@@ -82,7 +82,7 @@ class OpenIDConnectProvider(OAuth2Provider):
                         f"Invalid OpenID Connect prompt value: {prompt_token}"
                     )
 
-            ret["prompt"] = self.app.settings["prompt"]
+            ret["prompt"] = prompt
 
         if "max_age" in self.app.settings:
             max_age = int(self.app.settings["max_age"])
