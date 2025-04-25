@@ -90,6 +90,8 @@ class OpenIDConnectProvider(OAuth2Provider):
             if max_age < 0:
                 raise ValueError("OpenID Connect prompt max_age cannot be negative.")
 
+            ret["max_age"] = max_age
+
         return ret
 
     @property
