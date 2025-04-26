@@ -32,7 +32,7 @@ class SignupInput(BaseSignupForm, inputs.Input):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        password = account_settings.SIGNUP_FIELDS.get("password1")
+        password = account_settings.SIGNUP_FIELDS.get("password")
         if not password:
             del self.fields["password"]
         else:
