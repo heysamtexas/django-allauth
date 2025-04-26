@@ -3,10 +3,11 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.sites.shortcuts import get_current_site
 from django.core.exceptions import PermissionDenied
 from django.core.validators import validate_email
-from django.forms import ValidationError
+from django.forms import Form, ValidationError
 from django.http import Http404, HttpResponse, HttpResponseRedirect
 from django.urls import reverse, reverse_lazy
 from django.utils.decorators import method_decorator
+from django.utils.functional import cached_property
 from django.views.decorators.cache import never_cache
 from django.views.decorators.debug import sensitive_post_parameters
 from django.views.generic.base import TemplateView
@@ -890,23 +891,64 @@ class ConfirmEmailVerificationCodeView(FormView):
             )
         return super().dispatch(request, *args, **kwargs)
 
+    @cached_property
+    def _action(self):
+        action = self.request.POST.get("action")
+        if action not in ("verify", "change", "resend"):
+            action = "verify"
+        return action
+
     def get_form_class(self):
+        if self._action == "change":
+            return self._get_change_form_class()
+        elif self._action == "resend":
+            return Form
+        return self._get_verify_form_class()
+
+    def _get_change_form_class(self):
+        return AddEmailForm
+
+    def _get_verify_form_class(self):
         return get_form_class(
             app_settings.FORMS, "confirm_email_verification_code", self.form_class
         )
 
     def get_form_kwargs(self):
         ret = super().get_form_kwargs()
-        ret["code"] = self._process.code if self._process else ""
+        if self._action == "change":
+            ret["user"] = self._process.user
+        elif self._action == "verify":
+            ret["code"] = self._process.code if self._process else ""
         return ret
 
     def get_context_data(self, **kwargs):
         ret = super().get_context_data(**kwargs)
         ret["email"] = self._process.state["email"]
         ret["cancel_url"] = None if self.stage else reverse("account_email")
+        if self._action == "change":
+            ret["change_form"] = ret["form"]
+            ret["verify_form"] = self._get_verify_form_class()()
+        else:
+            ret["change_form"] = self._get_change_form_class()()
+            ret["verify_form"] = ret["form"]
         return ret
 
     def form_valid(self, form):
+        if self._action == "change":
+            return self._change_form_valid(form)
+        elif self._action == "resend":
+            return self._resend_form_valid(form)
+        return self._verify_form_valid(form)
+
+    def _resend_form_valid(self, form):
+        self._process.resend()
+        return HttpResponseRedirect(reverse("account_email_verification_sent"))
+
+    def _change_form_valid(self, form):
+        self._process.change_recipient(form.cleaned_data["email"])
+        return HttpResponseRedirect(reverse("account_email_verification_sent"))
+
+    def _verify_form_valid(self, form):
         email_address = self._process.finish()
         if self.stage:
             if not email_address:
@@ -921,6 +963,11 @@ class ConfirmEmailVerificationCodeView(FormView):
         return HttpResponseRedirect(url)
 
     def form_invalid(self, form):
+        if self._action == "change":
+            return self._change_form_invalid(form)
+        return self._verify_form_invalid(form)
+
+    def _verify_form_invalid(self, form):
         attempts_left = self._process.record_invalid_attempt()
         if attempts_left:
             return super().form_invalid(form)
@@ -1139,19 +1186,64 @@ class _BaseVerifyPhoneView(NextRedirectMixin, FormView):
         "account/confirm_phone_verification_code." + app_settings.TEMPLATE_EXTENSION
     )
 
+    @cached_property
+    def _action(self):
+        action = self.request.POST.get("action")
+        if action not in ("verify", "change", "resend"):
+            action = "verify"
+        return action
+
     def get_form_class(self):
+        if self._action == "change":
+            return self._get_change_form_class()
+        elif self._action == "resend":
+            return Form
+        return self._get_verify_form_class()
+
+    def _get_change_form_class(self):
+        return get_form_class(app_settings.FORMS, "change_phone", ChangePhoneForm)
+
+    def _get_verify_form_class(self):
         return get_form_class(app_settings.FORMS, "verify_phone", self.form_class)
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
-        kwargs["code"] = self.process.code
+        if self._action == "change":
+            kwargs["phone"] = self.process.phone
+        elif self._action == "resend":
+            pass
+        else:
+            kwargs["code"] = self.process.code
         return kwargs
 
     def form_valid(self, form):
+        if self._action == "change":
+            return self._change_form_valid(form)
+        elif self._action == "resend":
+            return self._resend_form_valid(form)
+        return self._verify_form_valid(form)
+
+    def _resend_form_valid(self, form):
+        self.process.resend()
+        return HttpResponseRedirect(reverse("account_verify_phone"))
+
+    def _change_form_valid(self, form):
+        self.process.change_recipient(form.cleaned_data["phone"])
+        return HttpResponseRedirect(reverse("account_verify_phone"))
+
+    def _verify_form_valid(self, form):
         self.process.finish()
         return self.respond_process_succeeded(form)
 
     def form_invalid(self, form):
+        if self._action == "change":
+            return self._change_form_invalid(form)
+        return self._verify_form_invalid(form)
+
+    def _change_form_invalid(self, form):
+        return super().form_invalid(form)
+
+    def _verify_form_invalid(self, form):
         attempts_left = self.process.record_invalid_attempt()
         if attempts_left:
             return super().form_invalid(form)
@@ -1161,10 +1253,17 @@ class _BaseVerifyPhoneView(NextRedirectMixin, FormView):
     def get_context_data(self, **kwargs):
         ret = super().get_context_data(**kwargs)
         site = get_current_site(self.request)
+        if self._action == "change":
+            ret["change_form"] = ret["form"]
+            ret["verify_form"] = self._get_verify_form_class()()
+        else:
+            ret["change_form"] = self._get_change_form_class()()
+            ret["verify_form"] = ret["form"]
         ret.update(
             {
                 "site": site,
                 "phone": self.process.phone,
+                "action": self._action,
             }
         )
         return ret

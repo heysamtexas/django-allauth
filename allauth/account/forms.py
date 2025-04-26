@@ -845,7 +845,7 @@ class BaseConfirmCodeForm(forms.Form):
     )
 
     def __init__(self, *args, **kwargs):
-        self.code = kwargs.pop("code")
+        self.code = kwargs.pop("code", None)
         super().__init__(*args, **kwargs)
 
     def clean_code(self):
@@ -873,7 +873,7 @@ class VerifyPhoneForm(BaseConfirmCodeForm):
 
 class ChangePhoneForm(forms.Form):
     def __init__(self, *args, **kwargs):
-        self.phone = kwargs.pop("phone")
+        self.phone = kwargs.pop("phone", None)
         super().__init__(*args, **kwargs)
         adapter = get_adapter()
         self.fields["phone"] = adapter.phone_form_field(required=True)

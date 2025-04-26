@@ -59,6 +59,9 @@ class PhoneVerificationProcess(AbstractCodeVerificationProcess):
             {"phone": phone},
         )
 
+    def resend(self):
+        self.send()
+
 
 class PhoneVerificationStageProcess(PhoneVerificationProcess):
     def __init__(self, stage):
@@ -96,6 +99,11 @@ class PhoneVerificationStageProcess(PhoneVerificationProcess):
             return
         return super().send()
 
+    def change_recipient(self, phone):
+        adapter = get_adapter()
+        adapter.set_phone(self.user, phone, False)
+        self.initiate(stage=self.stage, phone=phone)
+
 
 class ChangePhoneVerificationProcess(PhoneVerificationProcess):
     def __init__(self, request: HttpRequest, state: dict):
@@ -132,3 +140,6 @@ class ChangePhoneVerificationProcess(PhoneVerificationProcess):
             return None
         process = ChangePhoneVerificationProcess(request, state=state)
         return process.abort_if_invalid()
+
+    def change_recipient(self, phone):
+        self.initiate(context.request, phone=phone)

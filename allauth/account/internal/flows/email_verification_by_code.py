@@ -7,6 +7,9 @@ from allauth.account.adapter import get_adapter
 from allauth.account.internal.flows.code_verification import (
     AbstractCodeVerificationProcess,
 )
+from allauth.account.internal.flows.email_verification import (
+    send_verification_email,
+)
 from allauth.account.internal.stagekit import clear_login
 from allauth.account.models import EmailAddress, EmailConfirmationMixin
 from allauth.core import context
@@ -91,3 +94,16 @@ class EmailVerificationProcess(AbstractCodeVerificationProcess):
             return None
         process = EmailVerificationProcess(request=request, state=state)
         return process.abort_if_invalid()
+
+    def change_recipient(self, email: str):
+        EmailAddress.objects.add_new_email(context.request, self.user, email)
+        self.initiate(request=context.request, user=self.user, email=email)
+
+    def resend(self):
+        send_verification_email(
+            # FIXME
+            context.request,
+            self.user,
+            signup=False,
+            email=self.state["email"],
+        )
