@@ -894,7 +894,10 @@ class ConfirmEmailVerificationCodeView(FormView):
     @cached_property
     def _action(self):
         action = self.request.POST.get("action")
-        if action not in ("verify", "change", "resend"):
+        valid_actions = ["verify", "resend"]
+        if self._process.can_change_email:
+            valid_actions.append("change")
+        if action not in valid_actions:
             action = "verify"
         return action
 
@@ -923,6 +926,7 @@ class ConfirmEmailVerificationCodeView(FormView):
 
     def get_context_data(self, **kwargs):
         ret = super().get_context_data(**kwargs)
+        ret["can_change"] = self._process.can_change_email
         ret["email"] = self._process.state["email"]
         ret["cancel_url"] = None if self.stage else reverse("account_email")
         if self._action == "change":
@@ -945,7 +949,7 @@ class ConfirmEmailVerificationCodeView(FormView):
         return HttpResponseRedirect(reverse("account_email_verification_sent"))
 
     def _change_form_valid(self, form):
-        self._process.change_recipient(form.cleaned_data["email"])
+        self._process.change_email(form.cleaned_data["email"])
         return HttpResponseRedirect(reverse("account_email_verification_sent"))
 
     def _verify_form_valid(self, form):
@@ -1189,7 +1193,10 @@ class _BaseVerifyPhoneView(NextRedirectMixin, FormView):
     @cached_property
     def _action(self):
         action = self.request.POST.get("action")
-        if action not in ("verify", "change", "resend"):
+        valid_actions = ["verify", "resend"]
+        if self._process.can_change_phone:
+            valid_actions.append("change")
+        if action not in valid_actions:
             action = "verify"
         return action
 
@@ -1228,7 +1235,7 @@ class _BaseVerifyPhoneView(NextRedirectMixin, FormView):
         return HttpResponseRedirect(reverse("account_verify_phone"))
 
     def _change_form_valid(self, form):
-        self.process.change_recipient(form.cleaned_data["phone"])
+        self.process.change_phone(form.cleaned_data["phone"])
         return HttpResponseRedirect(reverse("account_verify_phone"))
 
     def _verify_form_valid(self, form):

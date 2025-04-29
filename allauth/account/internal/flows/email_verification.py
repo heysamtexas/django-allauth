@@ -249,13 +249,17 @@ def send_verification_email(
                 assert email_address  # nosec
             # At this point, if we were supposed to send an email we have sent it.
     if send_email:
-        adapter.add_message(
-            request,
-            messages.INFO,
-            "account/messages/email_confirmation_sent.txt",
-            {"email": email, "login": not signup, "signup": signup},
-        )
+        add_email_verifiction_sent_message(request, email, signup)
     return sent
+
+
+def add_email_verifiction_sent_message(request: HttpRequest, email: str, signup: bool):
+    get_adapter().add_message(
+        request,
+        messages.INFO,
+        "account/messages/email_confirmation_sent.txt",
+        {"email": email, "login": not signup, "signup": signup},
+    )
 
 
 def is_verification_rate_limited(request: HttpRequest, login: Login) -> bool:

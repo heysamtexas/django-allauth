@@ -498,3 +498,11 @@ def pytest_ignore_collect(path, config):
         if abs_skipped_path == Path(path) or abs_skipped_path in Path(path).parents:
             return True
     return False
+
+
+@pytest.fixture()
+def messagesoutbox():
+    from tests.common import adapters
+
+    adapters.messagesoutbox = []
+    yield adapters.messagesoutbox

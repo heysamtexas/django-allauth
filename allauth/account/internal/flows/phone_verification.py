@@ -62,6 +62,13 @@ class PhoneVerificationProcess(AbstractCodeVerificationProcess):
     def resend(self):
         self.send()
 
+    @property
+    def can_change_phone(self) -> bool:
+        # TODO: Prevent enumeration flaw: if we don't have a user, we cannot
+        # change the phone. To fix this, we would need to serialize
+        # the user and perform an on-the-fly signup here.
+        return app_settings.CAN_CHANGE_PHONE_DURING_VERIFICATION and bool(self.user)
+
 
 class PhoneVerificationStageProcess(PhoneVerificationProcess):
     def __init__(self, stage):
@@ -99,7 +106,7 @@ class PhoneVerificationStageProcess(PhoneVerificationProcess):
             return
         return super().send()
 
-    def change_recipient(self, phone):
+    def change_phone(self, phone):
         adapter = get_adapter()
         adapter.set_phone(self.user, phone, False)
         self.initiate(stage=self.stage, phone=phone)
@@ -141,5 +148,5 @@ class ChangePhoneVerificationProcess(PhoneVerificationProcess):
         process = ChangePhoneVerificationProcess(request, state=state)
         return process.abort_if_invalid()
 
-    def change_recipient(self, phone):
+    def change_phone(self, phone):
         self.initiate(context.request, phone=phone)

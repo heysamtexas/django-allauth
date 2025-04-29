@@ -6,6 +6,9 @@ from allauth.account.adapter import DefaultAccountAdapter
 from tests.common import phone_stub
 
 
+messagesoutbox = []
+
+
 class AccountAdapter(DefaultAccountAdapter):
     def set_phone(self, user, phone: str, verified: bool):
         phone_stub.set_phone(user.pk, phone, verified)
@@ -31,3 +34,13 @@ class AccountAdapter(DefaultAccountAdapter):
 
     def send_account_already_exists_sms(self, phone: str):
         phone_stub.send_account_already_exists_sms(phone)
+
+    def add_message(self, *args, **kwargs):
+        message_template = kwargs.get("message_template")
+        message = None
+        if message_template is None:
+            message = kwargs.get("message")
+            if message is None:
+                message_template = args[2]
+        messagesoutbox.append(dict(message=message, message_template=message_template))
+        return super().add_message(*args, **kwargs)

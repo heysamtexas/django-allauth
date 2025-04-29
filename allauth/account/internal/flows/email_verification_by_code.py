@@ -8,6 +8,7 @@ from allauth.account.internal.flows.code_verification import (
     AbstractCodeVerificationProcess,
 )
 from allauth.account.internal.flows.email_verification import (
+    add_email_verifiction_sent_message,
     send_verification_email,
 )
 from allauth.account.internal.stagekit import clear_login
@@ -95,15 +96,29 @@ class EmailVerificationProcess(AbstractCodeVerificationProcess):
         process = EmailVerificationProcess(request=request, state=state)
         return process.abort_if_invalid()
 
-    def change_recipient(self, email: str):
+    @property
+    def can_change_email(self) -> bool:
+        # TODO: Prevent enumeration flaw: if we don't have a user, we cannot
+        # change the email. To fix this, we would need to serialize
+        # the user and perform an on-the-fly signup here.
+        return app_settings.CAN_CHANGE_EMAIL_DURING_VERIFICATION and bool(self.user)
+
+    def change_email(self, email: str):
         EmailAddress.objects.add_new_email(context.request, self.user, email)
         self.initiate(request=context.request, user=self.user, email=email)
 
     def resend(self):
+        email = self.state["email"]
+        signup = False  # FIXME
+        if not self.user:
+            # Let's avoid spamming a user with "Unknown account"" emails,
+            # and so nothing here.
+            add_email_verifiction_sent_message(context.request, email, signup)
+            return
         send_verification_email(
             # FIXME
             context.request,
             self.user,
-            signup=False,
-            email=self.state["email"],
+            signup=signup,
+            email=email,
         )

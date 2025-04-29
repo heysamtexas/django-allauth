@@ -531,6 +531,14 @@ class AppSettings:
             return value
         return set(value)
 
+    @property
+    def CAN_CHANGE_EMAIL_DURING_VERIFICATION(self) -> bool:
+        return False
+
+    @property
+    def CAN_CHANGE_PHONE_DURING_VERIFICATION(self) -> bool:
+        return False
+
 
 _app_settings = AppSettings("ACCOUNT_")
 

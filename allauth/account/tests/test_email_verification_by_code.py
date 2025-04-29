@@ -1,3 +1,4 @@
+from http import HTTPStatus
 from unittest.mock import patch
 
 from django.conf import settings
@@ -175,3 +176,50 @@ def test_email_verification_rate_limits(
             assert resp.context["form"].errors == {
                 "__all__": ["Too many failed login attempts. Try again later."]
             }
+
+
+def test_change_email_vs_enumeration_prevention(
+    client,
+    db,
+    settings,
+    password_factory,
+    get_last_email_verification_code,
+    mailoutbox,
+    messagesoutbox,
+    user,
+):
+    password = password_factory()
+    resp = client.post(
+        reverse("account_signup"),
+        {
+            "username": "johndoe",
+            "email": user.email,
+            "password1": password,
+            "password2": password,
+        },
+    )
+    # No user signed up.
+    assert get_user_model().objects.filter(username="johndoe").count() == 0
+    assert resp.status_code == HTTPStatus.FOUND
+    assert resp["location"] == reverse("account_email_verification_sent")
+    assert len(mailoutbox) == 1
+    assert mailoutbox[0].subject == "[example.com] Account Already Exists"
+    assert len(messagesoutbox) == 1
+    assert (
+        messagesoutbox[-1]["message_template"]
+        == "account/messages/email_confirmation_sent.txt"
+    )
+
+    # Resend
+    resp = client.post(reverse("account_email_verification_sent"), {"action": "resend"})
+    assert len(mailoutbox) == 1
+    assert resp.status_code == HTTPStatus.FOUND
+    assert resp["location"] == reverse("account_email_verification_sent")
+    # No new emails sent.
+    assert len(mailoutbox) == 1
+    # Yet, pretend we did.
+    assert len(messagesoutbox) == 2
+    assert (
+        messagesoutbox[-1]["message_template"]
+        == "account/messages/email_confirmation_sent.txt"
+    )
