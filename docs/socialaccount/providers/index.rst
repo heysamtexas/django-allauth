@@ -97,6 +97,7 @@ Provider Specifics
    netiq
    nextcloud
    notion
+   oauth2
    odnoklassniki
    okta
    openid_connect
