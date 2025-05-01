@@ -12,6 +12,7 @@ from allauth.account.internal.flows.email_verification import (
     send_verification_email,
 )
 from allauth.account.internal.stagekit import clear_login
+from allauth.account.internal.userkit import did_user_login
 from allauth.account.models import EmailAddress, EmailConfirmationMixin
 from allauth.core import context
 
@@ -101,7 +102,11 @@ class EmailVerificationProcess(AbstractCodeVerificationProcess):
         # TODO: Prevent enumeration flaw: if we don't have a user, we cannot
         # change the email. To fix this, we would need to serialize
         # the user and perform an on-the-fly signup here.
-        return app_settings.CAN_CHANGE_EMAIL_DURING_VERIFICATION and bool(self.user)
+        return (
+            app_settings.CAN_CHANGE_EMAIL_DURING_VERIFICATION
+            and bool(self.user)
+            and not did_user_login(self.user)
+        )
 
     def change_email(self, email: str):
         EmailAddress.objects.add_new_email(context.request, self.user, email)

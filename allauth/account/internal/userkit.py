@@ -1,4 +1,5 @@
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import AbstractBaseUser
 from django.core.exceptions import FieldDoesNotExist
 
 
@@ -37,3 +38,7 @@ def user_field(user, field, *args, commit=False):
     else:
         # Getter
         return getattr(user, field)
+
+
+def did_user_login(user: AbstractBaseUser) -> bool:
+    return user.last_login is not None

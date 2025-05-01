@@ -12,7 +12,7 @@ from allauth.account.internal.flows.reauthentication import (
     raise_if_reauthentication_required,
 )
 from allauth.account.internal.stagekit import stash_login
-from allauth.account.internal.userkit import user_id_to_str
+from allauth.account.internal.userkit import did_user_login, user_id_to_str
 from allauth.core import context
 
 
@@ -67,7 +67,11 @@ class PhoneVerificationProcess(AbstractCodeVerificationProcess):
         # TODO: Prevent enumeration flaw: if we don't have a user, we cannot
         # change the phone. To fix this, we would need to serialize
         # the user and perform an on-the-fly signup here.
-        return app_settings.CAN_CHANGE_PHONE_DURING_VERIFICATION and bool(self.user)
+        return (
+            app_settings.CAN_CHANGE_PHONE_DURING_VERIFICATION
+            and bool(self.user)
+            and not did_user_login(self.user)
+        )
 
 
 class PhoneVerificationStageProcess(PhoneVerificationProcess):
