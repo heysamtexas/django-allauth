@@ -59,6 +59,10 @@ class PhoneVerificationProcess(AbstractCodeVerificationProcess):
             {"phone": phone},
         )
 
+    @property
+    def can_resend(self) -> bool:
+        return app_settings.PHONE_VERIFICATION_SUPPORTS_RESEND
+
     def resend(self):
         self.send()
 
@@ -68,7 +72,7 @@ class PhoneVerificationProcess(AbstractCodeVerificationProcess):
         # change the phone. To fix this, we would need to serialize
         # the user and perform an on-the-fly signup here.
         return (
-            app_settings.CAN_CHANGE_PHONE_DURING_VERIFICATION
+            app_settings.PHONE_VERIFICATION_SUPPORTS_CHANGE
             and bool(self.user)
             and not did_user_login(self.user)
         )

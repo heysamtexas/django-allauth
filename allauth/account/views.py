@@ -894,9 +894,11 @@ class ConfirmEmailVerificationCodeView(FormView):
     @cached_property
     def _action(self):
         action = self.request.POST.get("action")
-        valid_actions = ["verify", "resend"]
+        valid_actions = ["verify"]
         if self._process.can_change_email:
             valid_actions.append("change")
+        if self._process.can_resend:
+            valid_actions.append("resend")
         if action not in valid_actions:
             action = "verify"
         return action
@@ -927,6 +929,7 @@ class ConfirmEmailVerificationCodeView(FormView):
     def get_context_data(self, **kwargs):
         ret = super().get_context_data(**kwargs)
         ret["can_change"] = self._process.can_change_email
+        ret["can_resend"] = self._process.can_resend
         ret["email"] = self._process.state["email"]
         ret["cancel_url"] = None if self.stage else reverse("account_email")
         if self._action == "change":
@@ -1193,9 +1196,11 @@ class _BaseVerifyPhoneView(NextRedirectMixin, FormView):
     @cached_property
     def _action(self):
         action = self.request.POST.get("action")
-        valid_actions = ["verify", "resend"]
-        if self._process.can_change_phone:
+        valid_actions = ["verify"]
+        if self.process.can_change_phone:
             valid_actions.append("change")
+        if self.process.can_resend:
+            valid_actions.append("resend")
         if action not in valid_actions:
             action = "verify"
         return action
@@ -1231,6 +1236,7 @@ class _BaseVerifyPhoneView(NextRedirectMixin, FormView):
         return self._verify_form_valid(form)
 
     def _resend_form_valid(self, form):
+        # FIXME: rate limit
         self.process.resend()
         return HttpResponseRedirect(reverse("account_verify_phone"))
 
@@ -1259,6 +1265,8 @@ class _BaseVerifyPhoneView(NextRedirectMixin, FormView):
 
     def get_context_data(self, **kwargs):
         ret = super().get_context_data(**kwargs)
+        ret["can_change"] = self.process.can_change_phone
+        ret["can_resend"] = self.process.can_resend
         site = get_current_site(self.request)
         if self._action == "change":
             ret["change_form"] = ret["form"]

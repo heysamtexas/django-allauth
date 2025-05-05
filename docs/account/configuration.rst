@@ -232,6 +232,13 @@ Email Verification
   The code that is emailed has a limited life span. It expires this many seconds after
   which it was sent.
 
+``ACCOUNT_EMAIL_VERIFICATION_SUPPORTS_CHANGE`` (default: ``False``)
+  Whether or not the email can be changed after signup at the email veriication
+  stage.
+
+``ACCOUNT_EMAIL_VERIFICATION_SUPPORTS_RESEND`` (default: ``False``)
+  Whether or not the user can request a new email verification code.
+
 
 Reauthentication
 ****************

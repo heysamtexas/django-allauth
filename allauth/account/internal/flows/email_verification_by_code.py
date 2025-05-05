@@ -103,7 +103,7 @@ class EmailVerificationProcess(AbstractCodeVerificationProcess):
         # change the email. To fix this, we would need to serialize
         # the user and perform an on-the-fly signup here.
         return (
-            app_settings.CAN_CHANGE_EMAIL_DURING_VERIFICATION
+            app_settings.EMAIL_VERIFICATION_SUPPORTS_CHANGE
             and bool(self.user)
             and not did_user_login(self.user)
         )
@@ -111,6 +111,10 @@ class EmailVerificationProcess(AbstractCodeVerificationProcess):
     def change_email(self, email: str):
         EmailAddress.objects.add_new_email(context.request, self.user, email)
         self.initiate(request=context.request, user=self.user, email=email)
+
+    @property
+    def can_resend(self) -> bool:
+        return app_settings.EMAIL_VERIFICATION_SUPPORTS_RESEND
 
     def resend(self):
         email = self.state["email"]

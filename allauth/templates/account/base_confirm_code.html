@@ -38,9 +38,11 @@
                 {% element button type="submit" tags=submit_button_tags %}
                     {% translate "Confirm" %}
                 {% endelement %}
-                {% element button form="resend" tags="outline,resend" %}
-                    {% translate "Request new code" %}
-                {% endelement %}
+                {% if can_resend %}
+                    {% element button form="resend" tags="outline,resend" %}
+                        {% translate "Request new code" %}
+                    {% endelement %}
+                {% endif %}
                 {% if cancel_url %}
                     {% element button href=cancel_url tags="outline,cancel" %}
                         {% translate "Cancel" %}
