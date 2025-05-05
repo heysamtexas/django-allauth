@@ -16,7 +16,6 @@ Django configuration
 ********************
 
 Use the following settings example to login via VK (full name - VK ID).
-Enabling PKCE is important.
 
 .. code-block:: python
 
@@ -32,7 +31,6 @@ Enabling PKCE is important.
             'SCOPE': [
                 'email',
             ],
-            'OAUTH_PKCE_ENABLED': True,
         }
     }
 

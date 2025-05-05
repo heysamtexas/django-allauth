@@ -41,10 +41,8 @@ class VKOAuth2Adapter(OAuth2Adapter):
         resp_data = resp.json()
         if "error" in resp_data or "user" not in resp_data:
             raise RequestException('Could not get basic data for user being authenticated')
-        extra_data = resp_data["user"]
-        if not "id" in extra_data and "user_id" in extra_data:
-            extra_data["id"] = extra_data["user_id"]
-        return self.get_provider().sociallogin_from_response(request, extra_data)
+        return self.get_provider().sociallogin_from_response(request, resp_data["user"])
+            
 
 
 oauth2_login = OAuth2LoginView.adapter_view(VKOAuth2Adapter)
