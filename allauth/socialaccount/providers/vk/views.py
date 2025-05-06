@@ -20,8 +20,11 @@ class VKOAuth2Adapter(OAuth2Adapter):
         code = get_request_param(self.request, "code")
         device_id = get_request_param(self.request, "device_id")
         extra_data = {
-            'state': str(uuid.uuid4()),
-            'device_id': device_id,
+            # "state" isn't strictly necessary for now, but since VK ID documentation doesn't
+            # specify required vs optional parameters at all, we still add this (now optional)
+            # param to make the code less fragile for future, when they may start requiring it
+            "state": str(uuid.uuid4()),
+            "device_id": device_id,
         }
         data = client.get_access_token(
             code,
@@ -40,7 +43,7 @@ class VKOAuth2Adapter(OAuth2Adapter):
         resp.raise_for_status()
         resp_data = resp.json()
         if "error" in resp_data or "user" not in resp_data:
-            raise RequestException('Could not get basic data for user being authenticated')
+            raise RequestException("Could not get basic data for user being authenticated")
         return self.get_provider().sociallogin_from_response(request, resp_data["user"])
             
 
