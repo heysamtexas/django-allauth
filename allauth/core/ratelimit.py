@@ -147,7 +147,7 @@ def _consume_rate(
     if allowed and not dry_run:
         history.insert(0, now)
         cache.set(cache_key, history, rate.duration)
-    if not allowed:
+    if not allowed and raise_exception:
         raise RateLimited
     return allowed
 

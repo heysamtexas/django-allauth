@@ -29,10 +29,10 @@ class AccountAdapter(DefaultAccountAdapter):
     def send_verification_code_sms(self, user, phone: str, code: str, **kwargs):
         phone_stub.send_verification_code_sms(user, phone, code)
 
-    def send_unknown_account_sms(self, phone: str):
+    def send_unknown_account_sms(self, phone: str, **kwargs: typing.Any) -> None:
         phone_stub.send_unknown_account_sms(phone)
 
-    def send_account_already_exists_sms(self, phone: str):
+    def send_account_already_exists_sms(self, phone: str, **kwargs: typing.Any) -> None:
         phone_stub.send_account_already_exists_sms(phone)
 
     def add_message(self, *args, **kwargs):

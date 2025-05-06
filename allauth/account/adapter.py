@@ -874,7 +874,7 @@ class DefaultAccountAdapter(BaseAdapter):
 
         return PhoneField(**kwargs)
 
-    def send_unknown_account_sms(self, phone: str, **kwargs):
+    def send_unknown_account_sms(self, phone: str, **kwargs) -> None:
         """
         In case enumeration prevention is enabled, and, a verification code
         is requested for an unlisted phone number, this method is invoked to

@@ -233,7 +233,7 @@ def send_verification_email(
             email = user_email(user)
         if not email:
             email_address = (
-                EmailAddress.objects.filter(user=user)
+                EmailAddress.objects.filter(user_id=user.pk)
                 .order_by("verified", "pk")
                 .first()
             )

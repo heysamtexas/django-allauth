@@ -188,6 +188,7 @@ def test_change_email_vs_enumeration_prevention(
     messagesoutbox,
     user,
 ):
+    settings.ACCOUNT_EMAIL_VERIFICATION_SUPPORTS_RESEND = True
     password = password_factory()
     resp = client.post(
         reverse("account_signup"),

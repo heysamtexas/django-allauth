@@ -9,6 +9,7 @@ from allauth.account.internal.flows.code_verification import (
 )
 from allauth.account.internal.flows.email_verification import (
     add_email_verification_sent_message,
+    handle_verification_email_rate_limit,
     send_verification_email,
 )
 from allauth.account.internal.stagekit import clear_login
@@ -120,8 +121,11 @@ class EmailVerificationProcess(AbstractCodeVerificationProcess):
         email = self.state["email"]
         signup = False  # FIXME
         if not self.user:
-            # Let's avoid spamming a user with "Unknown account"" emails,
-            # and so nothing here.
+            # Let's avoid spamming a user with "Unknown account"" emails, and so
+            # nothing here. Still, pretend we do send to avoid enumeration.
+            handle_verification_email_rate_limit(
+                context.request, email, raise_exception=True
+            )
             add_email_verification_sent_message(context.request, email, signup)
             return
         send_verification_email(
