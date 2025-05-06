@@ -13,7 +13,7 @@ from allauth.account.internal.flows.reauthentication import (
 )
 from allauth.account.internal.stagekit import stash_login
 from allauth.account.internal.userkit import did_user_login, user_id_to_str
-from allauth.core import context
+from allauth.core import context, ratelimit
 
 
 PHONE_VERIFICATION_STATE_KEY = "phone_verification"
@@ -34,16 +34,22 @@ class PhoneVerificationProcess(AbstractCodeVerificationProcess):
         )
 
     @property
-    def phone(self):
+    def phone(self) -> str:
         return self.state["phone"]
 
     def send(self) -> None:
+        ratelimit.consume(
+            context.request,
+            action="verify_phone",
+            key=self.phone,
+            raise_exception=True,
+        )
         adapter = get_adapter()
         code = adapter.generate_phone_verification_code()
         adapter.send_verification_code_sms(
             user=self.user,
             code=code,
-            phone=self.state["phone"],
+            phone=self.phone,
         )
         self.state.update({"code": code, "user_id": user_id_to_str(self.user)})
         self.persist()

@@ -65,6 +65,7 @@ from allauth.account.utils import (
 from allauth.core import ratelimit
 from allauth.core.exceptions import ImmediateHttpResponse
 from allauth.core.internal.httpkit import redirect
+from allauth.core.ratelimit import RateLimited
 from allauth.decorators import rate_limit
 from allauth.utils import get_form_class
 
@@ -948,7 +949,15 @@ class ConfirmEmailVerificationCodeView(FormView):
         return self._verify_form_valid(form)
 
     def _resend_form_valid(self, form):
-        self._process.resend()
+        adapter = get_adapter()
+        try:
+            self._process.resend()
+        except RateLimited:
+            adapter.add_message(
+                self.request,
+                messages.ERROR,
+                message=adapter.error_messages["rate_limited"],
+            )
         return HttpResponseRedirect(reverse("account_email_verification_sent"))
 
     def _change_form_valid(self, form):
@@ -1236,8 +1245,15 @@ class _BaseVerifyPhoneView(NextRedirectMixin, FormView):
         return self._verify_form_valid(form)
 
     def _resend_form_valid(self, form):
-        # FIXME: rate limit
-        self.process.resend()
+        try:
+            self.process.resend()
+        except RateLimited:
+            adapter = get_adapter()
+            adapter.add_message(
+                self.request,
+                messages.ERROR,
+                message=adapter.error_messages["rate_limited"],
+            )
         return HttpResponseRedirect(reverse("account_verify_phone"))
 
     def _change_form_valid(self, form):

@@ -1,6 +1,7 @@
 from typing import Optional, Tuple
 
 from django.contrib import messages
+from django.contrib.auth.base_user import AbstractBaseUser
 from django.http import HttpRequest, HttpResponse
 from django.urls import reverse
 
@@ -143,14 +144,23 @@ def login_on_verification(request, email_address) -> Optional[HttpResponse]:
 
 
 def consume_email_verification_rate_limit(
-    request: HttpRequest, email: str, dry_run: bool = False
+    request: HttpRequest,
+    email: str,
+    dry_run: bool = False,
+    raise_exception: bool = False,
 ) -> bool:
     return ratelimit.consume(
-        request, action="confirm_email", key=email.lower(), dry_run=dry_run
+        request,
+        action="confirm_email",
+        key=email.lower(),
+        dry_run=dry_run,
+        raise_exception=raise_exception,
     )
 
 
-def handle_verification_email_rate_limit(request, email: str) -> bool:
+def handle_verification_email_rate_limit(
+    request, email: str, raise_exception: bool = False
+) -> bool:
     """
     For email verification by link, it is not an issue if the user runs into rate
     limits. The reason is that the link is session independent. Therefore, if the
@@ -161,14 +171,20 @@ def handle_verification_email_rate_limit(request, email: str) -> bool:
     verification emails is not an option, and we must hard fail (429) instead. The
     latter was missing, fixed.
     """
-    rl_ok = consume_email_verification_rate_limit(request, email)
+    rl_ok = consume_email_verification_rate_limit(
+        request, email, raise_exception=raise_exception
+    )
     if not rl_ok and app_settings.EMAIL_VERIFICATION_BY_CODE_ENABLED:
         raise ImmediateHttpResponse(ratelimit.respond_429(request))
     return rl_ok
 
 
 def send_verification_email(
-    request: HttpRequest, user, signup: bool = False, email=None
+    request: HttpRequest,
+    user: Optional[AbstractBaseUser],
+    signup: bool = False,
+    email=None,
+    raise_rate_limit_exception: bool = False,
 ) -> bool:
     """
     Email verification mails are sent:
@@ -190,7 +206,11 @@ def send_verification_email(
     send_email = False
     adapter = get_adapter()
     if not user:
-        send_email = handle_verification_email_rate_limit(request, email)
+        send_email = handle_verification_email_rate_limit(
+            request,
+            email,
+            raise_exception=raise_rate_limit_exception,
+        )
         if send_email:
             if signup:
                 adapter.send_account_already_exists_mail(email)
@@ -229,7 +249,9 @@ def send_verification_email(
             if email_address is not None:
                 if not email_address.verified:
                     send_email = handle_verification_email_rate_limit(
-                        request, email_address.email
+                        request,
+                        email_address.email,
+                        raise_exception=raise_rate_limit_exception,
                     )
                     if send_email:
                         send_email = adapter.should_send_confirmation_mail(
@@ -249,11 +271,11 @@ def send_verification_email(
                 assert email_address  # nosec
             # At this point, if we were supposed to send an email we have sent it.
     if send_email:
-        add_email_verifiction_sent_message(request, email, signup)
+        add_email_verification_sent_message(request, email, signup)
     return sent
 
 
-def add_email_verifiction_sent_message(request: HttpRequest, email: str, signup: bool):
+def add_email_verification_sent_message(request: HttpRequest, email: str, signup: bool):
     get_adapter().add_message(
         request,
         messages.INFO,

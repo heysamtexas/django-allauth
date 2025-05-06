@@ -16,6 +16,10 @@ from allauth.utils import import_callable
 Rate = namedtuple("Rate", "amount duration per")
 
 
+class RateLimited(Exception):
+    pass
+
+
 def _parse_duration(duration):
     if len(duration) == 0:
         raise ValueError(duration)
@@ -91,7 +95,15 @@ def clear(request, *, action, key=None, user=None):
         cache.delete(cache_key)
 
 
-def consume(request, *, action, key=None, user=None, dry_run: bool = False):
+def consume(
+    request,
+    *,
+    action,
+    key=None,
+    user=None,
+    dry_run: bool = False,
+    raise_exception: bool = False
+) -> bool:
     from allauth.account import app_settings
 
     if not request or request.method == "GET":
@@ -104,13 +116,28 @@ def consume(request, *, action, key=None, user=None, dry_run: bool = False):
     allowed = True
     for rate in rates:
         if not _consume_rate(
-            request, action=action, rate=rate, key=key, user=user, dry_run=dry_run
+            request,
+            action=action,
+            rate=rate,
+            key=key,
+            user=user,
+            dry_run=dry_run,
+            raise_exception=raise_exception,
         ):
             allowed = False
     return allowed
 
 
-def _consume_rate(request, *, action, rate, key=None, user=None, dry_run: bool = False):
+def _consume_rate(
+    request,
+    *,
+    action,
+    rate,
+    key=None,
+    user=None,
+    dry_run: bool = False,
+    raise_exception: bool = False
+):
     cache_key = _cache_key(request, action=action, rate=rate, key=key, user=user)
     history = cache.get(cache_key, [])
     now = time.time()
@@ -120,6 +147,8 @@ def _consume_rate(request, *, action, rate, key=None, user=None, dry_run: bool =
     if allowed and not dry_run:
         history.insert(0, now)
         cache.set(cache_key, history, rate.duration)
+    if not allowed:
+        raise RateLimited
     return allowed
 
 

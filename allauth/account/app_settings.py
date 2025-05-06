@@ -282,8 +282,10 @@ class AppSettings:
             "request_login_code": "20/m/ip,3/m/key",
             # Logins.
             "login_failed": login_failed_rl,
-            # Confirm email
+            # Verify email (to be renamed to verify_email)
             "confirm_email": confirm_email_rl,
+            # Verify phone
+            "verify_phone": "1/30s/key,3/m/ip",
         }
         ret.update(rls)
         return ret

@@ -8,7 +8,7 @@ from allauth.account.internal.flows.code_verification import (
     AbstractCodeVerificationProcess,
 )
 from allauth.account.internal.flows.email_verification import (
-    add_email_verifiction_sent_message,
+    add_email_verification_sent_message,
     send_verification_email,
 )
 from allauth.account.internal.stagekit import clear_login
@@ -122,7 +122,7 @@ class EmailVerificationProcess(AbstractCodeVerificationProcess):
         if not self.user:
             # Let's avoid spamming a user with "Unknown account"" emails,
             # and so nothing here.
-            add_email_verifiction_sent_message(context.request, email, signup)
+            add_email_verification_sent_message(context.request, email, signup)
             return
         send_verification_email(
             # FIXME
@@ -130,4 +130,5 @@ class EmailVerificationProcess(AbstractCodeVerificationProcess):
             self.user,
             signup=signup,
             email=email,
+            raise_rate_limit_exception=True,
         )

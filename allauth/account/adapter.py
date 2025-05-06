@@ -91,6 +91,7 @@ class DefaultAccountAdapter(BaseAdapter):
         ],
         "select_only_one": _("Please select only one."),
         "same_as_current": _("The new value must be different from the current one."),
+        "rate_limited": _("You are sending too many requests."),
     }
 
     def stash_verified_email(self, request, email):
