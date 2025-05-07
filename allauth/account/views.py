@@ -798,6 +798,7 @@ class ConfirmPasswordResetCodeView(NextRedirectMixin, FormView):
     def get_context_data(self, **kwargs):
         ret = super().get_context_data(**kwargs)
         ret["email"] = self._process.state["email"]
+        ret["verify_form"] = ret["form"]
         return ret
 
     def form_valid(self, form):
