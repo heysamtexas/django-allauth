@@ -67,23 +67,28 @@
             {% csrf_token %}
         </form>
     {% endif %}
+    {% setvar summary_ %}
+        {% block change_title %}{% endblock %}
+    {% endsetvar %}
     {% if can_change %}
-        <details {% if change_form.errors %}open{% endif %}>
-            <summary>
-                {% block change_title %}{% endblock %}
-            </summary>
-            {% element form form=change_form method="post" action=action_url %}
-                {% slot body %}
-                    {% csrf_token %}
-                    {% element fields form=change_form unlabeled=True %}
-                    {% endelement %}
-                {% endslot %}
-                {% slot actions %}
-                    {% element button name="action" value="change" type="submit" %}
-                        Change
-                    {% endelement %}
-                {% endslot %}
-            {% endelement %}
-        </details>
+        {% element details open=change_form.errors %}
+            {% slot summary %}
+                {{ summary_ }}
+            {% endslot %}
+            {% slot body %}
+                {% element form form=change_form method="post" action=action_url %}
+                    {% slot body %}
+                        {% csrf_token %}
+                        {% element fields form=change_form unlabeled=True %}
+                        {% endelement %}
+                    {% endslot %}
+                    {% slot actions %}
+                        {% element button name="action" value="change" type="submit" %}
+                            Change
+                        {% endelement %}
+                    {% endslot %}
+                {% endelement %}
+            {% endslot %}
+        {% endelement %}
     {% endif %}
 {% endblock content %}
