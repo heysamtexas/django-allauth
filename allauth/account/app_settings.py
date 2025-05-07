@@ -111,19 +111,25 @@ class AppSettings:
         return self._setting("EMAIL_VERIFICATION_BY_CODE_TIMEOUT", 15 * 60)
 
     @property
-    def EMAIL_VERIFICATION_SUPPORTS_CHANGE(self) -> bool:
+    def EMAIL_VERIFICATION_MAX_CHANGE_COUNT(self) -> int:
         """
-        Whether or not the email can be changed after signup at the email veriication
-        stage.
+        The maximum number of times the email can be changed after signup at
+        the email veriication stage.
         """
-        return self._setting("EMAIL_VERIFICATION_SUPPORTS_CHANGE", False)
+        v = self._setting("EMAIL_VERIFICATION_SUPPORTS_CHANGE", False)
+        if isinstance(v, bool):
+            v = 2 if v else 0
+        return v
 
     @property
-    def EMAIL_VERIFICATION_SUPPORTS_RESEND(self) -> bool:
+    def EMAIL_VERIFICATION_MAX_RESEND_COUNT(self) -> int:
         """
-        Whether or not the user can request a new email verification code.
+        The maximum number of times the user can request a new email verification code.
         """
-        return self._setting("EMAIL_VERIFICATION_SUPPORTS_RESEND", False)
+        v = self._setting("EMAIL_VERIFICATION_SUPPORTS_RESEND", False)
+        if isinstance(v, bool):
+            v = 2 if v else 0
+        return v
 
     @property
     def MAX_EMAIL_ADDRESSES(self):
@@ -178,19 +184,26 @@ class AppSettings:
         return self._setting("PHONE_VERIFICATION_MAX_ATTEMPTS", 3)
 
     @property
-    def PHONE_VERIFICATION_SUPPORTS_CHANGE(self) -> bool:
+    def PHONE_VERIFICATION_MAX_CHANGE_COUNT(self) -> int:
         """
-        Whether or not the phone number can be changed after signup at the
-        phone number verification stage.
+        The maximum number of times the phone number can be changed after
+        signup at the phone number verification stage.
         """
-        return self._setting("PHONE_VERIFICATION_SUPPORTS_CHANGE", False)
+        v = self._setting("PHONE_VERIFICATION_SUPPORTS_CHANGE", False)
+        if isinstance(v, bool):
+            v = 2 if v else 0
+        return v
 
     @property
-    def PHONE_VERIFICATION_SUPPORTS_RESEND(self) -> bool:
+    def PHONE_VERIFICATION_MAX_RESEND_COUNT(self) -> int:
         """
-        Whether or not the user can request a new phone number verification code.
+        The maximum number of times the user can request a new phone number
+        verification code.
         """
-        return self._setting("PHONE_VERIFICATION_SUPPORTS_RESEND", False)
+        v = self._setting("PHONE_VERIFICATION_SUPPORTS_RESEND", False)
+        if isinstance(v, bool):
+            v = 2 if v else 0
+        return v
 
     @property
     def PHONE_VERIFICATION_TIMEOUT(self):

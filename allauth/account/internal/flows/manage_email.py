@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 from django.contrib import messages
 from django.http import HttpRequest
@@ -143,6 +143,9 @@ def assess_unique_email(email) -> Optional[bool]:
     """
     from allauth.account.utils import filter_users_by_email
 
+    if not app_settings.UNIQUE_EMAIL:
+        return True
+
     if not filter_users_by_email(email):
         # All good.
         return True
@@ -187,3 +190,23 @@ def list_email_addresses(request, user) -> List[EmailAddress]:
                 addresses.append(email_address)
 
     return addresses
+
+
+def email_already_exists(email: str) -> Tuple[str, bool]:
+    """
+    Throws a validation error (if allowed by enumeration prevention rules).
+    Returns a tuple of [email, already_exists].
+    """
+    adapter = get_adapter()
+    assessment = assess_unique_email(email)
+    if assessment is True:
+        # No conflict
+        already_exists = False
+    elif assessment is False:
+        # Fail right away.
+        raise adapter.validation_error("email_taken")
+    else:
+        assert assessment is None  # nosec
+        already_exists = True
+    email = adapter.validate_unique_email(email)
+    return (email, already_exists)

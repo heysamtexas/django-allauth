@@ -16,6 +16,7 @@ from django.utils.translation import gettext, gettext_lazy as _, pgettext
 
 from allauth.account.app_settings import LoginMethod
 from allauth.account.internal import flows
+from allauth.account.internal.flows.manage_email import email_already_exists
 from allauth.account.internal.flows.signup import base_signup_form_class
 from allauth.account.internal.textkit import compare_code
 from allauth.core import context, ratelimit
@@ -408,7 +409,7 @@ class BaseSignupForm(base_signup_form_class()):  # type: ignore[misc]
     def clean_email(self):
         value = self.cleaned_data["email"].lower()
         value = get_adapter().clean_email(value)
-        if value and app_settings.UNIQUE_EMAIL:
+        if value:
             value = self.validate_unique_email(value)
         return value
 
@@ -416,19 +417,11 @@ class BaseSignupForm(base_signup_form_class()):  # type: ignore[misc]
         value = self.cleaned_data["email2"].lower()
         return value
 
-    def validate_unique_email(self, value):
-        adapter = get_adapter()
-        assessment = flows.manage_email.assess_unique_email(value)
-        if assessment is True:
-            # All good.
-            pass
-        elif assessment is False:
-            # Fail right away.
-            raise adapter.validation_error("email_taken")
-        else:
-            assert assessment is None  # nosec
-            self.account_already_exists = True
-        return adapter.validate_unique_email(value)
+    def validate_unique_email(self, value) -> str:
+        email, self.account_already_exists = flows.manage_email.email_already_exists(
+            value
+        )
+        return email
 
     def clean(self):
         cleaned_data = super().clean()
@@ -883,3 +876,24 @@ class ChangePhoneForm(forms.Form):
         if phone == self.phone:
             raise get_adapter().validation_error("same_as_current")
         return phone
+
+
+class ChangeEmailForm(forms.Form):
+    email = forms.EmailField(
+        label=_("Email"),
+        required=True,
+        widget=forms.TextInput(
+            attrs={"type": "email", "placeholder": _("Email address")}
+        ),
+    )
+
+    def __init__(self, *args, **kwargs):
+        self.email = kwargs.pop("email", None)
+        super().__init__(*args, **kwargs)
+
+    def clean_email(self):
+        email = self.cleaned_data["email"]
+        if email == self.email:
+            raise get_adapter().validation_error("same_as_current")
+        email, self.account_already_exists = email_already_exists(email)
+        return email

@@ -76,6 +76,8 @@ class EmailVerificationProcess(AbstractCodeVerificationProcess):
         return email_address
 
     def finish(self):
+        if not self.user or self.state.get("account_already_exists"):
+            raise ValueError
         verification = EmailVerificationModel(
             self.email_address, key=self.state["code"]
         )
@@ -99,40 +101,58 @@ class EmailVerificationProcess(AbstractCodeVerificationProcess):
         return process.abort_if_invalid()
 
     @property
-    def can_change_email(self) -> bool:
+    def can_change(self) -> bool:
         # TODO: Prevent enumeration flaw: if we don't have a user, we cannot
         # change the email. To fix this, we would need to serialize
         # the user and perform an on-the-fly signup here.
         return (
-            app_settings.EMAIL_VERIFICATION_SUPPORTS_CHANGE
+            not self.is_change_quota_reached(
+                app_settings.EMAIL_VERIFICATION_MAX_CHANGE_COUNT
+            )
             and bool(self.user)
             and not did_user_login(self.user)
         )
 
-    def change_email(self, email: str):
-        EmailAddress.objects.add_new_email(context.request, self.user, email)
-        self.initiate(request=context.request, user=self.user, email=email)
+    def change_to(self, email: str, account_already_exists: bool) -> None:
+        self.state["account_already_exists"] = account_already_exists
+        if account_already_exists:
+            handle_verification_email_rate_limit(
+                context.request, email, raise_exception=True
+            )
+            get_adapter().send_account_already_exists_mail(email)
+            add_email_verification_sent_message(context.request, email, True)
+        else:
+            EmailAddress.objects.add_new_email(context.request, self.user, email)
+        self.record_change(email=email)
+        self.send()
+        self.persist()
 
     @property
     def can_resend(self) -> bool:
-        return app_settings.EMAIL_VERIFICATION_SUPPORTS_RESEND
+        return not self.is_resend_quota_reached(
+            app_settings.EMAIL_VERIFICATION_MAX_RESEND_COUNT
+        )
 
     def resend(self):
         email = self.state["email"]
         signup = False  # FIXME
-        if not self.user:
+        if not self.user or self.state.get("account_already_exists"):
             # Let's avoid spamming a user with "Unknown account"" emails, and so
             # nothing here. Still, pretend we do send to avoid enumeration.
             handle_verification_email_rate_limit(
                 context.request, email, raise_exception=True
             )
             add_email_verification_sent_message(context.request, email, signup)
-            return
-        send_verification_email(
-            # FIXME
-            context.request,
-            self.user,
-            signup=signup,
-            email=email,
-            raise_rate_limit_exception=True,
-        )
+            sent = True
+        else:
+            sent = send_verification_email(
+                # FIXME
+                context.request,
+                self.user,
+                signup=signup,
+                email=email,
+                raise_rate_limit_exception=True,
+            )
+        if sent:
+            self.record_resend()
+            self.persist()

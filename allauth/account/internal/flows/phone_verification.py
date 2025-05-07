@@ -65,24 +65,6 @@ class PhoneVerificationProcess(AbstractCodeVerificationProcess):
             {"phone": phone},
         )
 
-    @property
-    def can_resend(self) -> bool:
-        return app_settings.PHONE_VERIFICATION_SUPPORTS_RESEND
-
-    def resend(self):
-        self.send()
-
-    @property
-    def can_change_phone(self) -> bool:
-        # TODO: Prevent enumeration flaw: if we don't have a user, we cannot
-        # change the phone. To fix this, we would need to serialize
-        # the user and perform an on-the-fly signup here.
-        return (
-            app_settings.PHONE_VERIFICATION_SUPPORTS_CHANGE
-            and bool(self.user)
-            and not did_user_login(self.user)
-        )
-
 
 class PhoneVerificationStageProcess(PhoneVerificationProcess):
     def __init__(self, stage):
@@ -120,10 +102,35 @@ class PhoneVerificationStageProcess(PhoneVerificationProcess):
             return
         return super().send()
 
-    def change_phone(self, phone):
+    def change_to(self, phone):
+        self.record_change(phone=phone)
         adapter = get_adapter()
         adapter.set_phone(self.user, phone, False)
-        self.initiate(stage=self.stage, phone=phone)
+        self.send()
+        self.persist()
+
+    def resend(self):
+        self.record_resend()
+        self.send()
+
+    @property
+    def can_resend(self) -> bool:
+        return not self.is_resend_quota_reached(
+            app_settings.PHONE_VERIFICATION_MAX_RESEND_COUNT
+        )
+
+    @property
+    def can_change(self) -> bool:
+        # TODO: Prevent enumeration flaw: if we don't have a user, we cannot
+        # change the phone. To fix this, we would need to serialize
+        # the user and perform an on-the-fly signup here.
+        return (
+            not self.is_change_quota_reached(
+                app_settings.PHONE_VERIFICATION_MAX_CHANGE_COUNT
+            )
+            and bool(self.user)
+            and not did_user_login(self.user)
+        )
 
 
 class ChangePhoneVerificationProcess(PhoneVerificationProcess):
@@ -161,6 +168,3 @@ class ChangePhoneVerificationProcess(PhoneVerificationProcess):
             return None
         process = ChangePhoneVerificationProcess(request, state=state)
         return process.abort_if_invalid()
-
-    def change_phone(self, phone):
-        self.initiate(context.request, phone=phone)

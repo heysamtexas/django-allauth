@@ -18,6 +18,7 @@ from allauth.account import app_settings
 from allauth.account.adapter import get_adapter
 from allauth.account.forms import (
     AddEmailForm,
+    ChangeEmailForm,
     ChangePasswordForm,
     ChangePhoneForm,
     ConfirmEmailVerificationCodeForm,
@@ -896,7 +897,7 @@ class ConfirmEmailVerificationCodeView(FormView):
     def _action(self):
         action = self.request.POST.get("action")
         valid_actions = ["verify"]
-        if self._process.can_change_email:
+        if self._process.can_change:
             valid_actions.append("change")
         if self._process.can_resend:
             valid_actions.append("resend")
@@ -912,7 +913,7 @@ class ConfirmEmailVerificationCodeView(FormView):
         return self._get_verify_form_class()
 
     def _get_change_form_class(self):
-        return AddEmailForm
+        return ChangeEmailForm
 
     def _get_verify_form_class(self):
         return get_form_class(
@@ -922,14 +923,14 @@ class ConfirmEmailVerificationCodeView(FormView):
     def get_form_kwargs(self):
         ret = super().get_form_kwargs()
         if self._action == "change":
-            ret["user"] = self._process.user
+            pass
         elif self._action == "verify":
             ret["code"] = self._process.code if self._process else ""
         return ret
 
     def get_context_data(self, **kwargs):
         ret = super().get_context_data(**kwargs)
-        ret["can_change"] = self._process.can_change_email
+        ret["can_change"] = self._process.can_change
         ret["can_resend"] = self._process.can_resend
         ret["email"] = self._process.state["email"]
         ret["cancel_url"] = None if self.stage else reverse("account_email")
@@ -961,7 +962,7 @@ class ConfirmEmailVerificationCodeView(FormView):
         return HttpResponseRedirect(reverse("account_email_verification_sent"))
 
     def _change_form_valid(self, form):
-        self._process.change_email(form.cleaned_data["email"])
+        self._process.change_to(form.cleaned_data["email"], form.account_already_exists)
         return HttpResponseRedirect(reverse("account_email_verification_sent"))
 
     def _verify_form_valid(self, form):
@@ -1206,7 +1207,7 @@ class _BaseVerifyPhoneView(NextRedirectMixin, FormView):
     def _action(self):
         action = self.request.POST.get("action")
         valid_actions = ["verify"]
-        if self.process.can_change_phone:
+        if self.process.can_change:
             valid_actions.append("change")
         if self.process.can_resend:
             valid_actions.append("resend")
@@ -1257,7 +1258,7 @@ class _BaseVerifyPhoneView(NextRedirectMixin, FormView):
         return HttpResponseRedirect(reverse("account_verify_phone"))
 
     def _change_form_valid(self, form):
-        self.process.change_phone(form.cleaned_data["phone"])
+        self.process.change_to(form.cleaned_data["phone"])
         return HttpResponseRedirect(reverse("account_verify_phone"))
 
     def _verify_form_valid(self, form):
@@ -1281,7 +1282,7 @@ class _BaseVerifyPhoneView(NextRedirectMixin, FormView):
 
     def get_context_data(self, **kwargs):
         ret = super().get_context_data(**kwargs)
-        ret["can_change"] = self.process.can_change_phone
+        ret["can_change"] = self.process.can_change
         ret["can_resend"] = self.process.can_resend
         site = get_current_site(self.request)
         if self._action == "change":
