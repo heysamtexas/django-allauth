@@ -135,7 +135,7 @@ def emit_email_changed(request, from_email_address, to_email_address) -> None:
         )
 
 
-def assess_unique_email(email) -> Optional[bool]:
+def assess_unique_email(email: str, user=None) -> Optional[bool]:
     """
     True -- email is unique
     False -- email is already in use
@@ -146,7 +146,11 @@ def assess_unique_email(email) -> Optional[bool]:
     if not app_settings.UNIQUE_EMAIL:
         return True
 
-    if not filter_users_by_email(email):
+    users_with_email = filter_users_by_email(email)
+    if user:
+        users_with_email = [u for u in users_with_email if u.pk != user.pk]
+    conflict = len(users_with_email) > 0
+    if not conflict:
         # All good.
         return True
     elif not app_settings.PREVENT_ENUMERATION:
@@ -192,13 +196,15 @@ def list_email_addresses(request, user) -> List[EmailAddress]:
     return addresses
 
 
-def email_already_exists(email: str) -> Tuple[str, bool]:
+def email_already_exists(
+    email: str, user=None, always_raise: bool = False
+) -> Tuple[str, bool]:
     """
     Throws a validation error (if allowed by enumeration prevention rules).
     Returns a tuple of [email, already_exists].
     """
     adapter = get_adapter()
-    assessment = assess_unique_email(email)
+    assessment = assess_unique_email(email, user=user)
     if assessment is True:
         # No conflict
         already_exists = False
@@ -209,4 +215,6 @@ def email_already_exists(email: str) -> Tuple[str, bool]:
         assert assessment is None  # nosec
         already_exists = True
     email = adapter.validate_unique_email(email)
+    if already_exists and always_raise:
+        raise adapter.validation_error("email_taken")
     return (email, already_exists)

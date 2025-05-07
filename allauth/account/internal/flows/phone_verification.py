@@ -162,12 +162,11 @@ class ChangePhoneVerificationProcess(PhoneVerificationProcess):
         self.request.session.pop(PHONE_VERIFICATION_SESSION_KEY, None)
 
     @classmethod
-    def initiate(cls, request: HttpRequest, phone: str, account_already_exists: bool):
+    def initiate(cls, request: HttpRequest, phone: str):
         if app_settings.REAUTHENTICATION_REQUIRED:
             raise_if_reauthentication_required(request)
 
         state = cls.initial_state(user=request.user, phone=phone)
-        state["account_already_exists"] = account_already_exists
         process = ChangePhoneVerificationProcess(request, state=state)
         process.send()
         return process
@@ -181,7 +180,7 @@ class ChangePhoneVerificationProcess(PhoneVerificationProcess):
         return process.abort_if_invalid()
 
 
-def phone_already_exists(user, phone: str) -> bool:
+def phone_already_exists(user, phone: str, always_raise: bool = False) -> bool:
     """
     Throws a validation error (if allowed by enumeration prevention rules).
     Otherwise, returns True iff another account already exists.
@@ -189,6 +188,6 @@ def phone_already_exists(user, phone: str) -> bool:
     adapter = get_adapter()
     other_user = adapter.get_user_by_phone(phone)
     already_exists = other_user and (not user or user.pk != other_user.pk)
-    if already_exists and not app_settings.PREVENT_ENUMERATION:
+    if already_exists and (not app_settings.PREVENT_ENUMERATION or always_raise):
         raise adapter.validation_error("phone_taken")
     return already_exists

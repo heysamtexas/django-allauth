@@ -381,7 +381,6 @@ class ManagePhoneView(AuthenticatedAPIView):
         flows.phone_verification.ChangePhoneVerificationProcess.initiate(
             self.request,
             phone,
-            account_already_exists=self.input.account_already_exists,
         )
         return response.PhoneNumbersResponse(
             self.request,

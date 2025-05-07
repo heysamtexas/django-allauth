@@ -129,6 +129,28 @@ def test_change_phone(
     assert resp["location"] == reverse("account_change_phone")
 
 
+def test_change_phone_to_already_existing(
+    auth_client, user, phone_only_settings, phone_factory, sms_outbox, user_factory
+):
+    other_phone = phone_factory()
+    user_factory(phone=other_phone)
+
+    resp = auth_client.post(reverse("account_change_phone"), {"phone": other_phone})
+    assert resp.status_code == HTTPStatus.FOUND
+    assert resp["location"] == reverse("account_verify_phone")
+
+    code = sms_outbox[-1]["code"]
+    resp = auth_client.get(reverse("account_verify_phone"))
+    assert resp.status_code == HTTPStatus.OK
+    assertTemplateUsed(resp, "account/confirm_phone_verification_code.html")
+
+    resp = auth_client.post(reverse("account_verify_phone"), {"code": code})
+    assert resp.status_code == HTTPStatus.OK
+    assert resp.context["form"].errors == {
+        "code": ["A user is already registered with this phone number."]
+    }
+
+
 def test_login_by_code_enumeration_prevention(
     db, phone_only_settings, client, phone_factory, sms_outbox
 ):

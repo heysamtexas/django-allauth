@@ -856,7 +856,17 @@ class ConfirmLoginCodeForm(BaseConfirmCodeForm):
 
 
 class ConfirmEmailVerificationCodeForm(BaseConfirmCodeForm):
-    pass
+    def __init__(self, *args, **kwargs) -> None:
+        self.user = kwargs.pop("user", None)
+        self.email = kwargs.pop("email", None)
+        super().__init__(*args, **kwargs)
+
+    def clean_code(self) -> str:
+        code = super().clean_code()
+        if code:
+            # We have a valid code. But, can we actually perform the change?
+            email_already_exists(user=self.user, email=self.email, always_raise=True)
+        return code
 
 
 class ConfirmPasswordResetCodeForm(BaseConfirmCodeForm):
@@ -864,7 +874,17 @@ class ConfirmPasswordResetCodeForm(BaseConfirmCodeForm):
 
 
 class VerifyPhoneForm(BaseConfirmCodeForm):
-    pass
+    def __init__(self, *args, **kwargs) -> None:
+        self.user = kwargs.pop("user", None)
+        self.phone = kwargs.pop("phone", None)
+        super().__init__(*args, **kwargs)
+
+    def clean_code(self) -> str:
+        code = super().clean_code()
+        if code:
+            # We have a valid code. But, can we actually perform the change?
+            phone_already_exists(self.user, self.phone, always_raise=True)
+        return code
 
 
 class ChangePhoneForm(forms.Form):

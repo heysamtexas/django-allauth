@@ -926,6 +926,8 @@ class ConfirmEmailVerificationCodeView(FormView):
             pass
         elif self._action == "verify":
             ret["code"] = self._process.code if self._process else ""
+            ret["user"] = self._process.user
+            ret["email"] = self._process.email
         return ret
 
     def get_context_data(self, **kwargs):
@@ -1189,6 +1191,7 @@ class ConfirmLoginCodeView(NextRedirectMixin, FormView):
                 "site": site,
                 "email": email,
                 "phone": phone,
+                "verify_form": ret["form"],
             }
         )
         return ret
@@ -1237,6 +1240,8 @@ class _BaseVerifyPhoneView(NextRedirectMixin, FormView):
             pass
         else:
             kwargs["code"] = self.process.code
+            kwargs["phone"] = self.process.phone
+            kwargs["user"] = self.process.user
         return kwargs
 
     def form_valid(self, form):
@@ -1390,7 +1395,7 @@ class ChangePhoneView(FormView):
 
     def form_valid(self, form):
         flows.phone_verification.ChangePhoneVerificationProcess.initiate(
-            self.request, form.cleaned_data["phone"], form.account_already_exists
+            self.request, form.cleaned_data["phone"]
         )
         return super().form_valid(form)
 
