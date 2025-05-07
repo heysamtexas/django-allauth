@@ -916,7 +916,7 @@ class DefaultAccountAdapter(BaseAdapter):
     def get_user_by_phone(self, phone: str):
         """
         Looks up a user given the specified phone number. Returns ``None`` if no user
-        was phone.
+        was found.
         """
         raise NotImplementedError
 

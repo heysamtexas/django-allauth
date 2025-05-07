@@ -17,6 +17,9 @@ from django.utils.translation import gettext, gettext_lazy as _, pgettext
 from allauth.account.app_settings import LoginMethod
 from allauth.account.internal import flows
 from allauth.account.internal.flows.manage_email import email_already_exists
+from allauth.account.internal.flows.phone_verification import (
+    phone_already_exists,
+)
 from allauth.account.internal.flows.signup import base_signup_form_class
 from allauth.account.internal.textkit import compare_code
 from allauth.core import context, ratelimit
@@ -866,6 +869,7 @@ class VerifyPhoneForm(BaseConfirmCodeForm):
 
 class ChangePhoneForm(forms.Form):
     def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop("user", None)
         self.phone = kwargs.pop("phone", None)
         super().__init__(*args, **kwargs)
         adapter = get_adapter()
@@ -873,8 +877,10 @@ class ChangePhoneForm(forms.Form):
 
     def clean_phone(self):
         phone = self.cleaned_data["phone"]
+        adapter = get_adapter()
         if phone == self.phone:
-            raise get_adapter().validation_error("same_as_current")
+            raise adapter.validation_error("same_as_current")
+        self.account_already_exists = phone_already_exists(self.user, phone)
         return phone
 
 

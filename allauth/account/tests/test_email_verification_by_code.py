@@ -224,3 +224,79 @@ def test_change_email_vs_enumeration_prevention(
         messagesoutbox[-1]["message_template"]
         == "account/messages/email_confirmation_sent.txt"
     )
+
+
+def test_change_to_already_existing_email(
+    client,
+    db,
+    settings,
+    password_factory,
+    get_last_email_verification_code,
+    mailoutbox,
+    messagesoutbox,
+    user,
+):
+    settings.ACCOUNT_EMAIL_VERIFICATION_SUPPORTS_RESEND = True
+    settings.ACCOUNT_EMAIL_VERIFICATION_SUPPORTS_CHANGE = True
+    password = password_factory()
+    resp = client.post(
+        reverse("account_signup"),
+        {
+            "username": "johndoe",
+            "email": "new@user.org",
+            "password1": password,
+            "password2": password,
+        },
+    )
+    # A user signed up.
+    new_user = get_user_model().objects.get(username="johndoe")
+    assert resp.status_code == HTTPStatus.FOUND
+    assert resp["location"] == reverse("account_email_verification_sent")
+    assert len(mailoutbox) == 1
+    assert mailoutbox[0].subject == "[example.com] Please Confirm Your Email Address"
+    assert len(messagesoutbox) == 1
+    assert (
+        messagesoutbox[-1]["message_template"]
+        == "account/messages/email_confirmation_sent.txt"
+    )
+
+    # Change to a conflicting email
+    resp = client.post(
+        reverse("account_email_verification_sent"),
+        {"action": "change", "email": user.email},
+    )
+    assert resp.status_code == HTTPStatus.FOUND
+    assert resp["location"] == reverse("account_email_verification_sent")
+    assert len(mailoutbox) == 2
+    assert mailoutbox[1].subject == "[example.com] Account Already Exists"
+    assert len(messagesoutbox) == 2
+    assert (
+        messagesoutbox[-1]["message_template"]
+        == "account/messages/email_confirmation_sent.txt"
+    )
+    new_user.refresh_from_db()
+    assert new_user.email == "new@user.org"
+
+    # Change back to new email
+    resp = client.post(
+        reverse("account_email_verification_sent"),
+        {"action": "change", "email": "new2@user.org"},
+    )
+    assert len(mailoutbox) == 3
+    assert resp.status_code == HTTPStatus.FOUND
+    assert resp["location"] == reverse("account_email_verification_sent")
+    assert mailoutbox[2].subject == "[example.com] Please Confirm Your Email Address"
+    assert len(messagesoutbox) == 3
+    assert (
+        messagesoutbox[-1]["message_template"]
+        == "account/messages/email_confirmation_sent.txt"
+    )
+    new_user.refresh_from_db()
+    assert new_user.email == "new2@user.org"
+
+    code = get_last_email_verification_code(client, mailoutbox)
+    resp = client.post(reverse("account_email_verification_sent"), data={"code": code})
+    assert resp.status_code == HTTPStatus.FOUND
+    email_address = EmailAddress.objects.filter(user=new_user).get()
+    assert email_address.verified
+    assert email_address.email == "new2@user.org"

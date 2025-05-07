@@ -379,7 +379,9 @@ class ManagePhoneView(AuthenticatedAPIView):
     def post(self, request, *args, **kwargs):
         phone = self.input.cleaned_data["phone"]
         flows.phone_verification.ChangePhoneVerificationProcess.initiate(
-            self.request, phone
+            self.request,
+            phone,
+            account_already_exists=self.input.account_already_exists,
         )
         return response.PhoneNumbersResponse(
             self.request,

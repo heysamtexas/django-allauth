@@ -1232,6 +1232,7 @@ class _BaseVerifyPhoneView(NextRedirectMixin, FormView):
         kwargs = super().get_form_kwargs()
         if self._action == "change":
             kwargs["phone"] = self.process.phone
+            kwargs["user"] = self.process.user
         elif self._action == "resend":
             pass
         else:
@@ -1258,7 +1259,7 @@ class _BaseVerifyPhoneView(NextRedirectMixin, FormView):
         return HttpResponseRedirect(reverse("account_verify_phone"))
 
     def _change_form_valid(self, form):
-        self.process.change_to(form.cleaned_data["phone"])
+        self.process.change_to(form.cleaned_data["phone"], form.account_already_exists)
         return HttpResponseRedirect(reverse("account_verify_phone"))
 
     def _verify_form_valid(self, form):
@@ -1384,11 +1385,12 @@ class ChangePhoneView(FormView):
             ret["phone"] = None
         else:
             ret["phone"] = self._phone_verified[0] if self._phone_verified else None
+        ret["user"] = self.request.user
         return ret
 
     def form_valid(self, form):
         flows.phone_verification.ChangePhoneVerificationProcess.initiate(
-            self.request, form.cleaned_data["phone"]
+            self.request, form.cleaned_data["phone"], form.account_already_exists
         )
         return super().form_valid(form)
 

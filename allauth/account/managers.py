@@ -3,6 +3,7 @@ from typing import Optional
 
 from django.db import models
 from django.db.models import Q
+from django.http import HttpRequest
 from django.utils import timezone
 
 from . import app_settings
@@ -25,11 +26,11 @@ class EmailAddressManager(models.Manager):
         """
         Returns the email address the user is in the process of changing to, if any.
         """
-        return (
-            self.model.objects.filter(user=user, verified=False).order_by("pk").last()
-        )
+        return self.filter(user=user, verified=False).order_by("pk").last()
 
-    def add_new_email(self, request, user, email):
+    def add_new_email(
+        self, request: HttpRequest, user, email: str, send_verification: bool = True
+    ):
         """
         Adds an email address the user wishes to change to, replacing his
         current email address once confirmed.
@@ -37,7 +38,7 @@ class EmailAddressManager(models.Manager):
         instance = self.get_new(user)
         email = email.lower()
         if not instance:
-            instance = self.model.objects.create(user=user, email=email)
+            instance = self.create(user=user, email=email)
         else:
             # Apparently, the user was already in the process of changing his
             # email.  Reuse that temporary email address.
@@ -45,7 +46,8 @@ class EmailAddressManager(models.Manager):
             instance.verified = False
             instance.primary = False
             instance.save()
-        instance.send_confirmation(request)
+        if send_verification:
+            instance.send_confirmation(request)
         return instance
 
     def add_email(self, request, user, email, confirm=False, signup=False):

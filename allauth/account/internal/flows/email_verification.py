@@ -185,6 +185,7 @@ def send_verification_email(
     signup: bool = False,
     email=None,
     raise_rate_limit_exception: bool = False,
+    skip_enumeration_mails: bool = False,
 ) -> bool:
     """
     Email verification mails are sent:
@@ -212,10 +213,11 @@ def send_verification_email(
             raise_exception=raise_rate_limit_exception,
         )
         if send_email:
-            if signup:
-                adapter.send_account_already_exists_mail(email)
-            else:
-                send_unknown_account_mail(request, email)
+            if not skip_enumeration_mails:
+                if signup:
+                    adapter.send_account_already_exists_mail(email)
+                else:
+                    send_unknown_account_mail(request, email)
             sent = True
         if app_settings.EMAIL_VERIFICATION_BY_CODE_ENABLED:
             from allauth.account.internal.flows.email_verification_by_code import (
