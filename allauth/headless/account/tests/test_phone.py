@@ -1,5 +1,9 @@
 from http import HTTPStatus
 
+from django.contrib.auth import get_user_model
+
+from allauth.account.adapter import get_adapter as get_account_adapter
+
 
 def test_change_phone_to_same(
     auth_client, user_with_phone, phone, settings_impacting_urls, headless_reverse
@@ -255,3 +259,63 @@ def test_change_phone_to_conflicting(
             ],
             "status": HTTPStatus.BAD_REQUEST,
         }
+
+
+def test_change_at_signup(
+    db,
+    client,
+    settings_impacting_urls,
+    phone,
+    headless_reverse,
+    headless_client,
+    password_factory,
+    sms_outbox,
+    phone_factory,
+):
+    with settings_impacting_urls(
+        ACCOUNT_SIGNUP_FIELDS=["phone*", "password1*"],
+        ACCOUNT_LOGIN_METHODS=("phone",),
+        ACCOUNT_PHONE_VERIFICATION_SUPPORTS_CHANGE=True,
+    ):
+        resp = client.post(
+            headless_reverse("headless:account:signup"),
+            data={
+                "phone": phone,
+                "password": password_factory(),
+            },
+            content_type="application/json",
+        )
+        user = get_user_model().objects.last()
+        assert resp.status_code == HTTPStatus.UNAUTHORIZED
+        assert len(sms_outbox) == 1
+
+        new_phone = phone_factory()
+        resp = client.post(
+            headless_reverse("headless:account:manage_phone"),
+            data={
+                "phone": new_phone,
+            },
+            content_type="application/json",
+        )
+        assert resp.status_code == HTTPStatus.ACCEPTED
+        assert resp.json() == {
+            "data": [
+                {
+                    "phone": new_phone,
+                    "verified": False,
+                },
+            ],
+            "status": HTTPStatus.ACCEPTED,
+        }
+
+        assert len(sms_outbox) == 2
+        code = sms_outbox[-1]["code"]
+        resp = client.post(
+            headless_reverse("headless:account:verify_phone"),
+            data={
+                "code": code,
+            },
+            content_type="application/json",
+        )
+        assert resp.json()["status"] == HTTPStatus.OK
+        assert get_account_adapter().get_phone(user) == (new_phone, True)

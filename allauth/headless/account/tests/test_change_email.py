@@ -1,5 +1,7 @@
 from http import HTTPStatus
 
+from django.contrib.auth import get_user_model
+
 from allauth.account.models import EmailAddress
 
 
@@ -173,3 +175,60 @@ def test_change_email_by_code(
     assert resp.status_code == HTTPStatus.OK
     assert EmailAddress.objects.filter(user=user).count() == 1
     assert EmailAddress.objects.filter(user=user, email=new_email).exists()
+
+
+def test_change_email_at_signup(
+    settings,
+    client,
+    user,
+    email_factory,
+    headless_reverse,
+    user_factory,
+    get_last_email_verification_code,
+    mailoutbox,
+    password_factory,
+):
+    settings.ACCOUNT_EMAIL_VERIFICATION = "mandatory"
+    settings.ACCOUNT_EMAIL_VERIFICATION_BY_CODE_ENABLED = True
+    settings.ACCOUNT_CHANGE_EMAIL = True
+    settings.ACCOUNT_EMAIL_VERIFICATION_SUPPORTS_CHANGE = True
+    email = email_factory()
+    resp = client.post(
+        headless_reverse("headless:account:signup"),
+        data={
+            "username": "wizard",
+            "email": email,
+            "password": password_factory(),
+        },
+        content_type="application/json",
+    )
+    assert resp.status_code == HTTPStatus.UNAUTHORIZED
+
+    user = get_user_model().objects.last()
+    assert EmailAddress.objects.filter(user=user).count() == 1
+    assert EmailAddress.objects.filter(user=user, email=email, verified=False).exists()
+
+    new_email = email_factory()
+    resp = client.post(
+        headless_reverse("headless:account:manage_email"),
+        data={"email": new_email},
+        content_type="application/json",
+    )
+    assert resp.status_code == HTTPStatus.OK
+    assert len(resp.json()["data"]) == 1
+    assert EmailAddress.objects.filter(user=user).count() == 1
+    assert EmailAddress.objects.filter(
+        user=user, email=new_email, verified=False
+    ).exists()
+
+    code = get_last_email_verification_code(client, mailoutbox)
+    resp = client.post(
+        headless_reverse("headless:account:verify_email"),
+        data={"key": code},
+        content_type="application/json",
+    )
+    assert resp.status_code == HTTPStatus.OK
+    assert EmailAddress.objects.filter(user=user).count() == 1
+    assert EmailAddress.objects.filter(
+        user=user, email=new_email, verified=True
+    ).exists()

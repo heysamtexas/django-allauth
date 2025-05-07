@@ -1024,10 +1024,15 @@ paths:
       tags:
         - "Account: Email"
       summary: |
-        Add an email addresses
+        Add/Change email address
       description: |
-        Add a new email address to the account. The email address will be marked as unverified, and
-        an email verification mail will be sent.
+        The following functionality is available:
+
+          - Adding a new email address for an already signed in user (`ACCOUNT_CHANGE_EMAIL = False`).
+          - Change to a new email address for an already signed in user   (`ACCOUNT_CHANGE_EMAIL = True`).
+          - Change to a new email address during the email verification process at signup (`ACCOUNT_EMAIL_VERIFICATION_SUPPORTS_CHANGE = True`).
+
+        In all cases, an email verification mail will be sent containing a link or code that needs to be verified.
       parameters:
         - $ref: "#/components/parameters/Client"
         - $ref: "#/components/parameters/SessionToken"
@@ -1047,6 +1052,13 @@ paths:
                   $ref: "#/components/examples/InvalidEmail"
         "401":
           $ref: "#/components/responses/AuthenticationOrReauthentication"
+        "409":
+          description: |
+            Conflict. For example, when no user is authenticated and no email verification flow is pending.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConflictResponse"
     put:
       tags:
         - "Account: Email"
@@ -1151,9 +1163,16 @@ paths:
       summary: |
         Change the phone number
       description: |
-        Initiate the phone number change process. After posting a new phone
-        number, proceed with the phone verification endpoint to confirm the
-        change of the phone number by posting the verification code.
+        The following functionality is available:
+
+        - Initiate the phone number change process for signed in users.
+        - Change to a new phone number during the phone number verification
+          process at signup for unauthenticated users. Note that this requires:
+          `ACCOUNT_PHONE_VERIFICATION_SUPPORTS_CHANGE = True`.
+
+        In both cases, after posting a new phone number, proceed with the phone
+        verification endpoint to confirm the change of the phone number by
+        posting the verification code.
       parameters:
         - $ref: "#/components/parameters/Client"
         - $ref: "#/components/parameters/SessionToken"
@@ -1174,6 +1193,13 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
         "401":
           $ref: "#/components/responses/AuthenticationOrReauthentication"
+        "409":
+          description: |
+            Conflict. For example, when no user is authenticated and no phone verification flow is pending.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConflictResponse"
   ######################################################################
   # Account: 2FA
   ######################################################################

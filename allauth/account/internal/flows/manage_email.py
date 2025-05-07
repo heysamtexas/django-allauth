@@ -182,7 +182,10 @@ def assess_unique_email(email: str, user=None) -> Optional[bool]:
 
 def list_email_addresses(request, user) -> List[EmailAddress]:
     addresses = list(EmailAddress.objects.filter(user=user))
-    if app_settings.EMAIL_VERIFICATION_BY_CODE_ENABLED:
+    if (
+        app_settings.EMAIL_VERIFICATION_BY_CODE_ENABLED
+        and request.user.is_authenticated
+    ):
         from allauth.account.internal.flows.email_verification_by_code import (
             EmailVerificationProcess,
         )
