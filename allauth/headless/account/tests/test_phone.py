@@ -57,7 +57,7 @@ def test_change_phone(
                     "verified": False,
                 },
             ],
-            "status": 202,
+            "status": HTTPStatus.ACCEPTED,
         }
 
         resp = auth_client.post(
@@ -207,3 +207,51 @@ def test_reauthentication(
         )
         assert resp.status_code == HTTPStatus.UNAUTHORIZED
         assert resp.json()["data"]["flows"] == [{"id": "reauthenticate"}]
+
+
+def test_change_phone_to_conflicting(
+    auth_client,
+    user_with_phone,
+    phone,
+    settings_impacting_urls,
+    headless_reverse,
+    user_factory,
+    phone_factory,
+    sms_outbox,
+):
+    other_phone = phone_factory()
+    user_factory(phone=other_phone)
+    with settings_impacting_urls(
+        ACCOUNT_SIGNUP_FIELDS=["phone*"],
+        ACCOUNT_LOGIN_METHODS=("phone",),
+    ):
+        resp = auth_client.post(
+            headless_reverse("headless:account:manage_phone"),
+            data={
+                "phone": other_phone,
+            },
+            content_type="application/json",
+        )
+        assert resp.status_code == HTTPStatus.ACCEPTED
+        assert resp.json() == {
+            "data": [{"phone": other_phone, "verified": False}],
+            "status": HTTPStatus.ACCEPTED,
+        }
+        resp = auth_client.post(
+            headless_reverse("headless:account:verify_phone"),
+            data={
+                "code": sms_outbox[-1]["code"],
+            },
+            content_type="application/json",
+        )
+        assert resp.status_code == HTTPStatus.BAD_REQUEST
+        assert resp.json() == {
+            "errors": [
+                {
+                    "code": "phone_taken",
+                    "message": "A user is already registered with this phone number.",
+                    "param": "code",
+                }
+            ],
+            "status": HTTPStatus.BAD_REQUEST,
+        }

@@ -219,7 +219,11 @@ class VerifyPhoneView(APIView):
         return super().handle(request, *args, **kwargs)
 
     def get_input_kwargs(self):
-        return {"code": self.process.code}
+        return {
+            "code": self.process.code,
+            "user": self.process.user,
+            "phone": self.process.phone,
+        }
 
     def handle_invalid_input(self, input: VerifyPhoneInput):
         self.process.record_invalid_attempt()
@@ -398,7 +402,7 @@ class ManagePhoneView(AuthenticatedAPIView):
         phone_verified = get_account_adapter().get_phone(self.request.user)
         if phone_verified:
             phone = phone_verified[0]
-        return {"phone": phone}
+        return {"phone": phone, "user": self.request.user}
 
 
 @method_decorator(rate_limit(action="reauthenticate"), name="handle")
