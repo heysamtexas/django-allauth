@@ -262,6 +262,29 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ConflictResponse"
+  /_allauth/{client}/v1/auth/email/verify/resend:
+    post:
+      tags:
+        - "Authentication: Account"
+      summary: Resend email verification code
+      description: |
+        Requests a new email verification code.
+        Requires `ACCOUNT_EMAIL_VERIFICATION_SUPPORTS_RESEND = True`.
+      parameters:
+        - $ref: "#/components/parameters/Client"
+        - $ref: "#/components/parameters/SessionToken"
+      responses:
+        "200":
+          $ref: "#/components/responses/StatusOK"
+        "409":
+          description: |
+            Conflict. The email verification (by code) flow is not pending.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConflictResponse"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
   /_allauth/{client}/v1/auth/phone/verify:
     post:
       tags:
@@ -295,6 +318,29 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ConflictResponse"
+  /_allauth/{client}/v1/auth/phone/verify/resend:
+    post:
+      tags:
+        - "Authentication: Account"
+      summary: Resend phone number verification code
+      description: |
+        Requests a new phone number verification code.
+        Requires `ACCOUNT_PHONE_VERIFICATION_SUPPORTS_RESEND = True`.
+      parameters:
+        - $ref: "#/components/parameters/Client"
+        - $ref: "#/components/parameters/SessionToken"
+      responses:
+        "200":
+          $ref: "#/components/responses/StatusOK"
+        "409":
+          description: |
+            Conflict. The phone verification flow is not pending.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConflictResponse"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
   /_allauth/{client}/v1/auth/reauthenticate:
     post:
       tags:
@@ -3319,6 +3365,20 @@ components:
             properties:
               status:
                 $ref: "#/components/schemas/StatusOK"
+            required:
+              - status
+    TooManyRequests:
+      description: |
+        Too many requests.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              status:
+                type: integer
+                enum:
+                  - 429
             required:
               - status
     TOTPAuthenticator:

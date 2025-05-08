@@ -25,7 +25,7 @@ from allauth.account.stages import (
 )
 from allauth.account.utils import send_email_confirmation
 from allauth.core import ratelimit
-from allauth.core.exceptions import ImmediateHttpResponse
+from allauth.core.exceptions import ImmediateHttpResponse, RateLimited
 from allauth.decorators import rate_limit
 from allauth.headless.account import response
 from allauth.headless.account.inputs import (
@@ -52,6 +52,7 @@ from allauth.headless.base.response import (
     AuthenticationResponse,
     ConflictResponse,
     ForbiddenResponse,
+    RateLimitResponse,
 )
 from allauth.headless.base.views import APIView, AuthenticatedAPIView
 from allauth.headless.internal import authkit
@@ -242,6 +243,43 @@ class VerifyPhoneView(APIView):
         if self.stage:
             response = self.stage.exit()
         return AuthenticationResponse.from_response(request, response)
+
+
+class ResendPhoneVerificationCodeView(APIView):
+    handle_json_input = False
+
+    def post(self, request, *args, **kwargs):
+        process = None
+        stage = LoginStageController.enter(request, PhoneVerificationStage.key)
+        if stage:
+            process = flows.phone_verification.PhoneVerificationStageProcess.resume(
+                stage
+            )
+        if not process or not process.can_resend:
+            return ConflictResponse(request)
+        try:
+            process.resend()
+        except RateLimited:
+            return RateLimitResponse(request)
+        return APIResponse(request)
+
+
+class ResendEmailVerificationCodeView(APIView):
+    handle_json_input = False
+
+    def post(self, request, *args, **kwargs):
+        if not account_settings.EMAIL_VERIFICATION_BY_CODE_ENABLED:
+            return ConflictResponse(request)
+        process = flows.email_verification_by_code.EmailVerificationProcess.resume(
+            request
+        )
+        if not process or not process.can_resend:
+            return ConflictResponse(request)
+        try:
+            process.resend()
+        except RateLimited:
+            return RateLimitResponse(request)
+        return APIResponse(request)
 
 
 class RequestPasswordResetView(APIView):

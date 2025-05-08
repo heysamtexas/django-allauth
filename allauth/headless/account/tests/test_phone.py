@@ -2,6 +2,8 @@ from http import HTTPStatus
 
 from django.contrib.auth import get_user_model
 
+import pytest
+
 from allauth.account.adapter import get_adapter as get_account_adapter
 
 
@@ -319,3 +321,49 @@ def test_change_at_signup(
         )
         assert resp.json()["status"] == HTTPStatus.OK
         assert get_account_adapter().get_phone(user) == (new_phone, True)
+
+
+@pytest.mark.parametrize("rate_limit_enabled", [(False,), (True,)])
+def test_resend_at_signup(
+    db,
+    client,
+    settings_impacting_urls,
+    phone,
+    headless_reverse,
+    headless_client,
+    password_factory,
+    sms_outbox,
+    phone_factory,
+    rate_limit_enabled,
+    request,
+):
+    if rate_limit_enabled:
+        request.getfixturevalue("enable_cache")
+    with settings_impacting_urls(
+        ACCOUNT_SIGNUP_FIELDS=["phone*", "password1*"],
+        ACCOUNT_LOGIN_METHODS=("phone",),
+        ACCOUNT_PHONE_VERIFICATION_SUPPORTS_RESEND=True,
+    ):
+        resp = client.post(
+            headless_reverse("headless:account:signup"),
+            data={
+                "phone": phone,
+                "password": password_factory(),
+            },
+            content_type="application/json",
+        )
+        assert resp.status_code == HTTPStatus.UNAUTHORIZED
+        assert len(sms_outbox) == 1
+
+        resp = client.post(
+            headless_reverse("headless:account:resend_phone_verification_code"),
+        )
+        if rate_limit_enabled:
+            assert resp.status_code == HTTPStatus.TOO_MANY_REQUESTS
+        else:
+            assert resp.status_code == HTTPStatus.OK
+            assert len(sms_outbox) == 2
+
+            old_code = sms_outbox[0]["code"]
+            new_code = sms_outbox[1]["code"]
+            assert old_code != new_code

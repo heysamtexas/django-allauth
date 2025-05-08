@@ -10,14 +10,11 @@ from django.http import HttpResponse
 from django.shortcuts import render
 
 from allauth import app_settings
+from allauth.core.exceptions import RateLimited
 from allauth.utils import import_callable
 
 
 Rate = namedtuple("Rate", "amount duration per")
-
-
-class RateLimited(Exception):
-    pass
 
 
 def _parse_duration(duration):
