@@ -41,6 +41,9 @@ Available settings:
   Whether or not the phone number can be changed after signup at the
   phone number verification stage.
 
+  **Warning**: the warning related to enumeration prevent over at
+   ``ACCOUNT_EMAIL_VERIFICATION_SUPPORTS_CHANGE`` holds here as well.
+
 ``ACCOUNT_PHONE_VERIFICATION_SUPPORTS_RESEND`` (default: ``False``)
   Whether or not the user can request a new phone number verification code.
 
