@@ -23,7 +23,7 @@ def lint(session):
 @nox.session(tags=["lint"])
 def isort(session):
     session.install("isort==5.13.2")
-    session.run("isort", "--check-only", "--diff", ".")
+    session.run("isort", "--check-only", "--diff", "allauth", "tests")
 
 
 @nox.session(tags=["lint"])
