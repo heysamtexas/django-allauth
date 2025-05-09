@@ -2,6 +2,7 @@ from pathlib import Path
 
 from django.contrib.auth.hashers import PBKDF2PasswordHasher
 
+from tests.common.settings import IDP_OPENID_CONNECT_PRIVATE_KEY  # noqa
 from tests.common.settings import INSTALLED_SOCIALACCOUNT_APPS
 
 

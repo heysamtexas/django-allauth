@@ -1,4 +1,3 @@
-from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.contrib.sites.shortcuts import get_current_site
 from django.core.exceptions import PermissionDenied
@@ -23,6 +22,7 @@ from allauth.account import app_settings as account_settings
 from allauth.account.internal.decorators import login_not_required
 from allauth.core.internal import jwkkit
 from allauth.core.internal.httpkit import add_query_params
+from allauth.idp.protocols.openid_connect import app_settings
 from allauth.idp.protocols.openid_connect.adapter import get_adapter
 from allauth.idp.protocols.openid_connect.forms import AuthorizeForm
 from allauth.idp.protocols.openid_connect.internal.oauthlib.server import (
@@ -226,7 +226,7 @@ user_info = UserInfoView.as_view()
 class JwksView(View):
     def get(self, request, *args, **kwargs):
         keys = []
-        for pem in [settings.IDP_OPENID_CONNECT_PRIVATE_KEY]:
+        for pem in [app_settings.PRIVATE_KEY]:
             jwk, _ = jwkkit.load_jwk_from_pem(pem)
             keys.append(jwk)
         response = JsonResponse({"keys": keys})
