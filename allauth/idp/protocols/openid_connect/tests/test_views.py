@@ -270,7 +270,7 @@ def test_client_credentials(client, oidc_client):
             "grant_type": "client_credentials",
         },
     )
-    assert resp.status_code == 200
+    assert resp.status_code == HTTPStatus.OK
     data = resp.json()
     assert data == {
         "access_token": ANY,
@@ -442,3 +442,27 @@ def test_revoke_refresh_token(db, client, oidc_client, user, refresh_token_facto
     assert resp.status_code == HTTPStatus.OK
     assert resp.content == b""
     assert not Token.objects.filter(pk=token_instance.pk).exists()
+
+
+def test_jwks_view(client):
+    resp = client.get(reverse("idp:openid_connect:jwks"))
+    assert resp.status_code == HTTPStatus.OK
+    assert resp.json() == {
+        "keys": [{"e": ANY, "key_ops": ["verify"], "kid": ANY, "kty": "RSA", "n": ANY}]
+    }
+
+
+def test_configuration_view(client):
+    resp = client.get(reverse("idp:openid_connect:configuration"))
+    assert resp.status_code == HTTPStatus.OK
+    assert resp.json() == {
+        "authorization_endpoint": "http://testserver/identity/oidc/authorize",
+        "id_token_signing_alg_values_supported": ["RS256"],
+        "issuer": "http://testserver",
+        "jwks_uri": "http://testserver/.well-known/jwks.json",
+        "response_types_supported": ["code"],
+        "revocation_endpoint": "http://testserver/identity/oidc/revoke",
+        "subject_types_supported": ["public"],
+        "token_endpoint": "http://testserver/identity/oidc/token",
+        "userinfo_endpoint": "http://testserver/identity/oidc/userinfo",
+    }
