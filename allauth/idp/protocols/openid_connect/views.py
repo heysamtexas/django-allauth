@@ -195,6 +195,7 @@ authorize = AuthorizeView.as_view()
 
 
 @method_decorator(csrf_exempt, name="dispatch")
+@method_decorator(login_not_required, name="dispatch")
 class TokenView(View):
 
     def post(self, request):
@@ -206,6 +207,7 @@ class TokenView(View):
 token = TokenView.as_view()
 
 
+@method_decorator(login_not_required, name="dispatch")
 class UserInfoView(View):
 
     def get(self, request):
