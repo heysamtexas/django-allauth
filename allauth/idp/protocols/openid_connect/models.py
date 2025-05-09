@@ -47,16 +47,24 @@ class Client(models.Model):
     )
     secret = models.CharField(max_length=200, default=default_client_secret)
     scopes = models.TextField(
-        help_text=_("The scope the client is allowed to request."),
+        help_text=_(
+            "The scope(s) the client is allowed to request. Provide one value per line, e.g.: openid(ENTER)profile(ENTER)email(ENTER)"
+        ),
     )
     grant_types = models.TextField(
         default=GrantType.AUTHORIZATION_CODE,
-        help_text=_("A list of allowed grant types."),
+        help_text=_(
+            "A list of allowed grant types. Provide one value per line, e.g.: authorization_code(ENTER)client_credentials(ENTER)refresh_token(ENTER)"
+        ),
     )
-    redirect_uris = models.TextField()
+    redirect_uris = models.TextField(
+        help_text="A list of allowed redirect (callback) URLs, one per line."
+    )
     response_types = models.TextField(
         default="code",
-        help_text=_("A list of allowed response types."),
+        help_text=_(
+            "A list of allowed response types. Provide one value per line, e.g.: code(ENTER)"
+        ),
     )
     owner = models.ForeignKey(
         settings.AUTH_USER_MODEL, blank=True, null=True, on_delete=models.CASCADE
@@ -80,13 +88,13 @@ class Client(models.Model):
     def get_scopes(self) -> List[str]:
         return _values_from_text(self.scopes)
 
-    def set_scopes(self, scopes: List[str]):
+    def set_scopes(self, scopes: List[str]) -> None:
         self.scopes = _values_to_text(scopes)
 
     def get_response_types(self) -> List[str]:
         return _values_from_text(self.response_types)
 
-    def set_response_types(self, response_types: List[str]):
+    def set_response_types(self, response_types: List[str]) -> None:
         self.response_types = _values_to_text(response_types)
 
     def get_grant_types(self) -> List[str]:
@@ -98,7 +106,7 @@ class Client(models.Model):
     def get_secret(self) -> str:
         return get_adapter().decrypt(self.secret)
 
-    def set_secret(self, secret) -> str:
+    def set_secret(self, secret) -> None:
         self.secret = get_adapter().encrypt(secret)
 
     def __str__(self) -> str:

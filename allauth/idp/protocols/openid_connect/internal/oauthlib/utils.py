@@ -1,4 +1,4 @@
-from typing import Tuple
+from typing import Dict, Tuple
 from urllib.parse import urlparse, urlunparse
 
 from django.http import HttpRequest, HttpResponse
@@ -10,7 +10,7 @@ from oauthlib.oauth2.rfc6749.errors import OAuth2Error
 from allauth.account import app_settings as account_settings
 
 
-def get_uri(request: HttpRequest):
+def get_uri(request: HttpRequest) -> str:
     """
     Django considers "safe" some characters that aren't so for oauthlib.
     We have to search for them and properly escape.
@@ -23,14 +23,16 @@ def get_uri(request: HttpRequest):
     return urlunparse(parsed)
 
 
-def extract_params(request: HttpRequest) -> Tuple[str, str, str, dict]:
+def extract_params(request: HttpRequest) -> Tuple[str, str, str, Dict[str, str]]:
     uri = get_uri(request)
-    body = urlencode(request.POST.items())
+    body: str = urlencode(request.POST.items())
     headers = extract_headers(request)
+    if request.method is None:
+        raise ValueError(request.method)
     return uri, request.method, body, headers
 
 
-def extract_headers(request):
+def extract_headers(request) -> Dict[str, str]:
     """
     You need to define extract_params and make sure it does not include file
     like objects waiting for input. In Django this is request.META['wsgi.input']

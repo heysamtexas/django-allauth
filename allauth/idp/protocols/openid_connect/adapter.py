@@ -26,7 +26,7 @@ class DefaultOpenIDConnectAdapter(BaseAdapter):
         return text
 
     def decrypt(self, encrypted_text: str) -> str:
-        """Counter part of ``encrypt()``."""
+        """Counterpart of ``encrypt()``."""
         text = encrypted_text
         return text
 

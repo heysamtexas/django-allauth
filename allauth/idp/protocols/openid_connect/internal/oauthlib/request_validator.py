@@ -153,8 +153,8 @@ class OAuthLibRequestValidator(RequestValidator):
                     hash=adapter.hash_token(refresh_token),
                 )
             )
-        for token in tokens:
-            token.set_scopes(request.scopes)
+        for t in tokens:
+            t.set_scopes(request.scopes)
         Token.objects.bulk_create(tokens)
 
     def invalidate_authorization_code(self, client_id, code, request, *args, **kwargs):
@@ -232,9 +232,9 @@ class OAuthLibRequestValidator(RequestValidator):
         return True
 
     def revoke_token(self, token, token_type_hint, request, *args, **kwargs):
-        if token_type_hint == "access_token":
+        if token_type_hint == "access_token":  # nosec
             types = Token.Type.ACCESS_TOKEN
-        elif token_type_hint == "refresh_token":
+        elif token_type_hint == "refresh_token":  # nosec
             types = Token.Type.REFRESH_TOKEN
         else:
             types = [Token.Type.ACCESS_TOKEN, Token.Type.REFRESH_TOKEN]

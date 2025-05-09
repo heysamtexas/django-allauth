@@ -79,7 +79,7 @@ def test_authorization_code_flow(auth_client, user, oidc_client, enable_cache, s
     parts = urlparse(redirected_uri)
     params = parse_qs(parts.query)
     code = params["code"][0]
-    assert  = params["state"][0] == "some-state"
+    assert params["state"][0] == "some-state"
     resp = auth_client.post(
         reverse("idp:openid_connect:token"),
         {
@@ -239,7 +239,7 @@ def test_userinfo(client, oidc_client, user, access_token_generator, scopes):
     assert data["sub"] == get_adapter().get_user_sub(oidc_client, user)
     if "email" in scopes:
         assert data["email"] == user.email
-        assert data["email_verified"] == True
+        assert data["email_verified"] is True
     else:
         assert "email" not in data
 

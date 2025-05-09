@@ -38,21 +38,27 @@ class Migration(migrations.Migration):
                 (
                     "scopes",
                     models.TextField(
-                        help_text="The scope the client is allowed to request."
+                        help_text="The scope(s) the client is allowed to request. Provide one value per line, e.g.: openid(ENTER)profile(ENTER)email(ENTER)"
                     ),
                 ),
                 (
                     "grant_types",
                     models.TextField(
                         default="authorization_code",
-                        help_text="A list of allowed grant types.",
+                        help_text="A list of allowed grant types. Provide one value per line, e.g.: authorization_code(ENTER)client_credentials(ENTER)refresh_token(ENTER)",
                     ),
                 ),
-                ("redirect_uris", models.TextField()),
+                (
+                    "redirect_uris",
+                    models.TextField(
+                        help_text="A list of allowed redirect (callback) URLs, one per line."
+                    ),
+                ),
                 (
                     "response_types",
                     models.TextField(
-                        default="code", help_text="A list of allowed response types."
+                        default="code",
+                        help_text="A list of allowed response types. Provide one value per line, e.g.: code(ENTER)",
                     ),
                 ),
                 (
