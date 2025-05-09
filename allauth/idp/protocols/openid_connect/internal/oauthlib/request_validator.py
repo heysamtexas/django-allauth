@@ -281,3 +281,16 @@ class OAuthLibRequestValidator(RequestValidator):
             return True
         """
         return False
+
+    def validate_refresh_token(self, refresh_token, client, request, *args, **kwargs):
+        token = Token.objects.filter(client=client).lookup(
+            Token.Type.REFRESH_TOKEN, refresh_token
+        )
+        if not token:
+            return False
+        request.user = token.user
+        request._refresh_token_instance = token
+        return True
+
+    def get_original_scopes(self, refresh_token, request, *args, **kwargs):
+        return request._refresh_token_instance.get_scopes()

@@ -1,9 +1,11 @@
+from datetime import timedelta
 from http import HTTPStatus
 from unittest.mock import ANY
 from urllib.parse import parse_qs, urlparse
 
 from django.test import Client
 from django.urls import reverse
+from django.utils import timezone
 from django.utils.http import urlencode
 
 import jwt
@@ -406,3 +408,33 @@ def test_authorization_post_is_csrf_protected(user):
     resp = client.post(reverse("idp:openid_connect:authorize"), data=payload)
     assert resp.status_code == HTTPStatus.FORBIDDEN
     assert b"CSRF Failed" in resp.content
+
+
+def test_refresh_token(db, client, oidc_client, user):
+    adapter = get_adapter()
+    rt = Token.objects.create(
+        client=oidc_client,
+        user=user,
+        type=Token.Type.REFRESH_TOKEN,
+        hash=adapter.hash_token("some-rt"),
+        expires_at=timezone.now() + timedelta(seconds=60),
+    )
+    rt.set_scopes(["openid", "profile"])
+    rt.save()
+    resp = client.post(
+        reverse("idp:openid_connect:token"),
+        {
+            "refresh_token": "some-rt",
+            "grant_type": "refresh_token",
+            "client_id": oidc_client.id,
+            "client_secret": oidc_client.get_secret(),
+        },
+    )
+    assert resp.status_code == HTTPStatus.OK
+    assert resp.json() == {
+        "access_token": ANY,
+        "expires_in": 3600,
+        "refresh_token": ANY,
+        "scope": "openid profile",
+        "token_type": "Bearer",
+    }
