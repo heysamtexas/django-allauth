@@ -79,6 +79,7 @@ def test_authorization_code_flow(auth_client, user, oidc_client, enable_cache, s
     parts = urlparse(redirected_uri)
     params = parse_qs(parts.query)
     code = params["code"][0]
+    assert  = params["state"][0] == "some-state"
     resp = auth_client.post(
         reverse("idp:openid_connect:token"),
         {

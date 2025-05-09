@@ -4,13 +4,14 @@ from django.contrib.auth import get_user_model
 from django.core.cache import cache
 
 from allauth.account.internal.userkit import str_to_user_id, user_id_to_str
+from allauth.idp.protocols.openid_connect import app_settings
 
 
-def cache_key(client_id: str, code: str):
+def cache_key(client_id: str, code: str) -> str:
     return f"allauth.idp.oidc.authorization_code[{client_id}:{code}]"
 
 
-def create(client_id: str, code: dict, request):
+def create(client_id: str, code: dict, request) -> None:
     authorization_code = {
         "code": code,
         "client_id": request.client_id,
@@ -25,12 +26,10 @@ def create(client_id: str, code: dict, request):
             "code_challenge": code_challenge,
             "code_challenge_method": request.code_challenge_method,
         }
-    # FIXME: timeout setting
-    # FIXME: cache? configurable?
     cache.set(
         cache_key(client_id, code["code"]),
         authorization_code,
-        timeout=60,
+        timeout=app_settings.AUTHORIZATION_CODE_EXPIRES_IN,
     )
 
 
@@ -42,7 +41,7 @@ def invalidate(client_id: str, code: str) -> None:
     cache.delete(cache_key(client_id, code))
 
 
-def validate(client_id: str, code: str, request):
+def validate(client_id: str, code: str, request) -> bool:
     authorization_code = lookup(client_id, code)
     if not authorization_code:
         return False

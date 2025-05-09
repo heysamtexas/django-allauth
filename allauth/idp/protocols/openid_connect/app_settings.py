@@ -24,7 +24,11 @@ class AppSettings:
 
     @property
     def ACCESS_TOKEN_EXPIRES_IN(self) -> int:
-        return 3600
+        return self._setting("ACCESS_TOKEN_EXPIRES_IN", 3600)
+
+    @property
+    def AUTHORIZATION_CODE_EXPIRES_IN(self) -> int:
+        return self._setting("AUTHORIZATION_CODE_EXPIRES_IN", 60)
 
 
 _app_settings = AppSettings("IDP_OPENID_CONNECT_")

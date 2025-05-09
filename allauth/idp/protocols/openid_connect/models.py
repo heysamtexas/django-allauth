@@ -1,4 +1,3 @@
-import uuid
 from typing import List
 
 from django.conf import settings
@@ -128,18 +127,18 @@ class Token(models.Model):
         AUTHORIZATION_CODE = "ac", "Authorization code"
 
     type = models.CharField(max_length=2, choices=Type.choices)
-    hash = models.CharField(primary_key=True, max_length=255)
+    hash = models.CharField(max_length=255)
     client = models.ForeignKey(Client, on_delete=models.CASCADE)
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, blank=True, null=True
     )
     data = models.JSONField(blank=True, null=True, default=None)
     created_at = models.DateTimeField(default=timezone.now)
-    expires_at = models.DateTimeField(blank=True, null=True)
+    expires_at = models.DateTimeField(blank=True, null=True, db_index=True)
     scopes = models.TextField(default="")
 
-    # FIXME: indices
-    # FIXME: composite primary key type, value?
+    class Meta:
+        unique_together = (("type", "hash"),)
 
     def __str__(self) -> str:
         if self.user_id:

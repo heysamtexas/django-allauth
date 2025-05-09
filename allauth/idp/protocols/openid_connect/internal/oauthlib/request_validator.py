@@ -56,7 +56,6 @@ class OAuthLibRequestValidator(RequestValidator):
         authorization_codes.create(client_id, code, request)
 
     def authenticate_client(self, request, *args, **kwargs):
-        # FIXME: basic auth?
         client_id = getattr(request, "client_id", None)
         client_secret = getattr(request, "client_secret", None)
         if not isinstance(client_id, str) or not isinstance(client_secret, str):
