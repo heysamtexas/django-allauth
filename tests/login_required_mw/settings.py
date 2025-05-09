@@ -75,6 +75,7 @@ INSTALLED_APPS = (
     "allauth.mfa",
     "allauth.usersessions",
     "allauth.headless",
+    "allauth.idp.protocols.openid_connect",
 ) + INSTALLED_SOCIALACCOUNT_APPS
 
 AUTHENTICATION_BACKENDS = (
