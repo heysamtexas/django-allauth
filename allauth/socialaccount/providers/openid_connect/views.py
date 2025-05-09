@@ -3,7 +3,6 @@ from django.urls import reverse
 
 from allauth.account.internal.decorators import login_not_required
 from allauth.socialaccount.adapter import get_adapter
-from allauth.socialaccount.internal import jwtkit
 from allauth.socialaccount.models import SocialApp, SocialToken
 from allauth.socialaccount.providers.oauth2.views import (
     OAuth2Adapter,
@@ -49,15 +48,6 @@ class OpenIDConnectOAuth2Adapter(OAuth2Adapter):
         return self.openid_config["userinfo_endpoint"]
 
     def complete_login(self, request, app, token: SocialToken, **kwargs):
-        jwtkit.verify_and_decode(
-            credential=kwargs["response"]["id_token"],
-            keys_url="http://localhost:8000/.well-known/jwks.json",
-            issuer="http://localhost:8000",
-            audience=app.client_id,
-            lookup_kid=jwtkit.lookup_kid_jwk,
-            verify_signature=True,
-        )
-
         response = (
             get_adapter()
             .get_requests_session()
