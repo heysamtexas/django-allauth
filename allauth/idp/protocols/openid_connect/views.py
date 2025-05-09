@@ -224,7 +224,7 @@ user_info = UserInfoView.as_view()
 class JwksView(View):
     def get(self, request, *args, **kwargs):
         keys = []
-        for pem in settings.IDP_OPENID_CONNECT_PRIVATE_KEYS:
+        for pem in [settings.IDP_OPENID_CONNECT_PRIVATE_KEY]:
             jwk, _ = jwkkit.load_jwk_from_pem(pem)
             keys.append(jwk)
         response = JsonResponse({"keys": keys})

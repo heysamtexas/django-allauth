@@ -207,7 +207,7 @@ class OAuthLibRequestValidator(RequestValidator):
         id_token["jti"] = uuid.uuid4().hex
         id_token.update(get_claims(request.user, request.client, request.scopes))
         get_adapter().populate_id_token(id_token, request.client, request.scopes)
-        jwk_dict, private_key = jwkkit.load_jwk_from_pem(app_settings.PRIVATE_KEYS[0])
+        jwk_dict, private_key = jwkkit.load_jwk_from_pem(app_settings.PRIVATE_KEY)
         return jwt.encode(
             id_token, private_key, algorithm="RS256", headers={"kid": jwk_dict["kid"]}
         )
@@ -251,7 +251,7 @@ class OAuthLibRequestValidator(RequestValidator):
         return None
 
     def _decode_id_token(self, client, id_token: str):
-        jwk_dict, private_key = jwkkit.load_jwk_from_pem(app_settings.PRIVATE_KEYS[0])
+        jwk_dict, private_key = jwkkit.load_jwk_from_pem(app_settings.PRIVATE_KEY)
         return jwt.decode(
             id_token,
             audience=client.id,

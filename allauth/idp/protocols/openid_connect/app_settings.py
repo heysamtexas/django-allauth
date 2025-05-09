@@ -19,9 +19,8 @@ class AppSettings:
         return 5 * 60
 
     @property
-    def PRIVATE_KEYS(self) -> list[str]:
-        # FIXME: list for multiple, or move transition keys elsewhere?
-        return self._setting("PRIVATE_KEYS", [])
+    def PRIVATE_KEY(self) -> str:
+        return self._setting("PRIVATE_KEY", "")
 
     @property
     def ACCESS_TOKEN_EXPIRES_IN(self) -> int:
