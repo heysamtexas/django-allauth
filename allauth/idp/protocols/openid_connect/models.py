@@ -21,7 +21,7 @@ def default_client_secret() -> str:
     return adapter.encrypt(client_secret)
 
 
-def _values_from_text(text) -> list[str]:
+def _values_from_text(text) -> List[str]:
     return list(filter(None, [s.strip() for s in text.split("\n")]))
 
 
