@@ -1,6 +1,9 @@
 import time
 import uuid
+from datetime import timedelta
 from types import SimpleNamespace
+
+from django.utils import timezone
 
 import pytest
 
@@ -57,5 +60,24 @@ def access_token_generator():
         instance.set_scopes(scopes)
         instance.save()
         return token, instance
+
+    return f
+
+
+@pytest.fixture
+def refresh_token_factory():
+    def f(*, user, client):
+        adapter = get_adapter()
+        value = uuid.uuid4().hex
+        rt = Token.objects.create(
+            client=client,
+            user=user,
+            type=Token.Type.REFRESH_TOKEN,
+            hash=adapter.hash_token(value),
+            expires_at=timezone.now() + timedelta(seconds=60),
+        )
+        rt.set_scopes(["openid", "profile"])
+        rt.save()
+        return value, rt
 
     return f

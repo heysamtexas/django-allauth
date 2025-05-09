@@ -1,11 +1,9 @@
-from datetime import timedelta
 from http import HTTPStatus
 from unittest.mock import ANY
 from urllib.parse import parse_qs, urlparse
 
 from django.test import Client
 from django.urls import reverse
-from django.utils import timezone
 from django.utils.http import urlencode
 
 import jwt
@@ -246,7 +244,7 @@ def test_userinfo(client, oidc_client, user, access_token_generator, scopes):
         assert "email" not in data
 
 
-def test_revoke(client, oidc_client, user, access_token_generator):
+def test_revoke_access_token(client, oidc_client, user, access_token_generator):
     token, instance = access_token_generator(oidc_client, user)
     _, instance_to_keep = access_token_generator(oidc_client, user)
     resp = client.post(
@@ -257,7 +255,7 @@ def test_revoke(client, oidc_client, user, access_token_generator):
             "token": token,
         },
     )
-    assert resp.status_code == 200
+    assert resp.status_code == HTTPStatus.OK
     assert not Token.objects.filter(pk=instance.pk).exists()
     assert Token.objects.filter(pk=instance_to_keep.pk).exists()
 
@@ -410,21 +408,12 @@ def test_authorization_post_is_csrf_protected(user):
     assert b"CSRF Failed" in resp.content
 
 
-def test_refresh_token(db, client, oidc_client, user):
-    adapter = get_adapter()
-    rt = Token.objects.create(
-        client=oidc_client,
-        user=user,
-        type=Token.Type.REFRESH_TOKEN,
-        hash=adapter.hash_token("some-rt"),
-        expires_at=timezone.now() + timedelta(seconds=60),
-    )
-    rt.set_scopes(["openid", "profile"])
-    rt.save()
+def test_refresh_token(db, client, oidc_client, user, refresh_token_factory):
+    rt, _ = refresh_token_factory(user=user, client=oidc_client)
     resp = client.post(
         reverse("idp:openid_connect:token"),
         {
-            "refresh_token": "some-rt",
+            "refresh_token": rt,
             "grant_type": "refresh_token",
             "client_id": oidc_client.id,
             "client_secret": oidc_client.get_secret(),
@@ -438,3 +427,18 @@ def test_refresh_token(db, client, oidc_client, user):
         "scope": "openid profile",
         "token_type": "Bearer",
     }
+
+
+def test_revoke_refresh_token(db, client, oidc_client, user, refresh_token_factory):
+    token_value, token_instance = refresh_token_factory(user=user, client=oidc_client)
+    resp = client.post(
+        reverse("idp:openid_connect:revoke"),
+        {
+            "token": token_value,
+            "client_id": oidc_client.id,
+            "client_secret": oidc_client.get_secret(),
+        },
+    )
+    assert resp.status_code == HTTPStatus.OK
+    assert resp.content == b""
+    assert not Token.objects.filter(pk=token_instance.pk).exists()
