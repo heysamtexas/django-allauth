@@ -10,8 +10,11 @@ Available settings:
   Specifies the adapter class to use, allowing you to alter certain
   default behavior.
 
-``IDP_OPENID_CONNECT_PRIVATE_KEYS`` (default: ``[]``)
-  The private key.
+``AUTHORIZATION_CODE_EXPIRES_IN`` (default: 60)
+  The time (in seconds) after which authorization codes expire.
+
+``IDP_OPENID_CONNECT_PRIVATE_KEY`` (default: ``""``)
+  The private key used for creating ID tokens (and ``.well-known/jwks.json``).
 
 ``IDP_OPENID_CONNECT_ID_TOKEN_EXPIRES_IN`` (default: 300)
   The time (in seconds) after which ID tokens expire.
