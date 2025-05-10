@@ -3,8 +3,8 @@ from django.apps import AppConfig
 from allauth import app_settings
 
 
-class OpenIDConnectConfig(AppConfig):
-    name = "allauth.idp.protocols.openid_connect"
+class OIDCConfig(AppConfig):
+    name = "allauth.idp.oidc"
     label = "allauth_idp_oidc"
     verbose_name = "OpenID Connect IdP"
     default_auto_field = (

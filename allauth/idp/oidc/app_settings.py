@@ -11,7 +11,7 @@ class AppSettings:
     def ADAPTER(self):
         return self._setting(
             "ADAPTER",
-            "allauth.idp.protocols.openid_connect.adapter.DefaultOpenIDConnectAdapter",
+            "allauth.idp.oidc.adapter.DefaultOIDCAdapter",
         )
 
     @property
@@ -31,7 +31,7 @@ class AppSettings:
         return self._setting("AUTHORIZATION_CODE_EXPIRES_IN", 60)
 
 
-_app_settings = AppSettings("IDP_OPENID_CONNECT_")
+_app_settings = AppSettings("IDP_OIDC_")
 
 
 def __getattr__(name):

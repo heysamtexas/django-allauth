@@ -1,8 +1,6 @@
 from ninja import NinjaAPI
 
-from allauth.idp.protocols.openid_connect.contrib.ninja.security import (
-    TokenAuth,
-)
+from allauth.idp.oidc.contrib.ninja.security import TokenAuth
 
 
 api = NinjaAPI()

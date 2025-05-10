@@ -1,6 +1,6 @@
 from allauth.account.models import EmailAddress
 from allauth.account.utils import user_username
-from allauth.idp.protocols.openid_connect.adapter import get_adapter
+from allauth.idp.oidc.adapter import get_adapter
 
 
 def get_claims(user, client, scopes):

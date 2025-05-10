@@ -2,8 +2,8 @@ import secrets
 
 from oauthlib.openid import Server
 
-from allauth.idp.protocols.openid_connect import app_settings
-from allauth.idp.protocols.openid_connect.internal.oauthlib.request_validator import (
+from allauth.idp.oidc import app_settings
+from allauth.idp.oidc.internal.oauthlib.request_validator import (
     OAuthLibRequestValidator,
 )
 

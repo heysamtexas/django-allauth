@@ -3,7 +3,7 @@ import django.utils.timezone
 from django.conf import settings
 from django.db import migrations, models
 
-import allauth.idp.protocols.openid_connect.models
+import allauth.idp.oidc.models
 
 
 class Migration(migrations.Migration):
@@ -21,7 +21,7 @@ class Migration(migrations.Migration):
                 (
                     "id",
                     models.CharField(
-                        default=allauth.idp.protocols.openid_connect.models.default_client_id,
+                        default=allauth.idp.oidc.models.default_client_id,
                         max_length=100,
                         primary_key=True,
                         serialize=False,
@@ -31,7 +31,7 @@ class Migration(migrations.Migration):
                 (
                     "secret",
                     models.CharField(
-                        default=allauth.idp.protocols.openid_connect.models.default_client_secret,
+                        default=allauth.idp.oidc.models.default_client_secret,
                         max_length=200,
                     ),
                 ),

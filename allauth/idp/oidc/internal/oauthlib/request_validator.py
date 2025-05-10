@@ -9,16 +9,12 @@ from oauthlib.openid import RequestValidator
 
 from allauth.core import context
 from allauth.core.internal import jwkkit
-from allauth.idp.protocols.openid_connect import app_settings
-from allauth.idp.protocols.openid_connect.adapter import get_adapter
-from allauth.idp.protocols.openid_connect.internal.claims import get_claims
-from allauth.idp.protocols.openid_connect.internal.clientkit import (
-    is_redirect_uri_allowed,
-)
-from allauth.idp.protocols.openid_connect.internal.oauthlib import (
-    authorization_codes,
-)
-from allauth.idp.protocols.openid_connect.models import Client, Token
+from allauth.idp.oidc import app_settings
+from allauth.idp.oidc.adapter import get_adapter
+from allauth.idp.oidc.internal.claims import get_claims
+from allauth.idp.oidc.internal.clientkit import is_redirect_uri_allowed
+from allauth.idp.oidc.internal.oauthlib import authorization_codes
+from allauth.idp.oidc.models import Client, Token
 
 
 class OAuthLibRequestValidator(RequestValidator):

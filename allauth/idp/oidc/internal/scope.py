@@ -1,6 +1,6 @@
 from typing import Dict, List, Optional, Union
 
-from allauth.idp.protocols.openid_connect.models import Token
+from allauth.idp.oidc.models import Token
 
 
 def _is_scope_granted(

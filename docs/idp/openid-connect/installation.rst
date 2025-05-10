@@ -2,9 +2,9 @@ Installation
 ============
 
 In order to use this functionality you need to install the
-``idp-openid-connect`` extra as follows::
+``idp-oidc`` extra as follows::
 
-  pip install "django-allauth[idp-openid-connect]"
+  pip install "django-allauth[idp-oidc]"
 
 As the provider functionality is dependent on the regular allauth account
 handling, you will need to follow the installation instructions related to
@@ -15,7 +15,7 @@ In your ``settings.py``, include the OpenID Connect provider app::
 
     INSTALLED_APPS = [
         ...
-        "allauth.idp.protocols.openid_connect",
+        "allauth.idp.oidc",
         ...
     ]
 
@@ -25,7 +25,7 @@ Next, create a private key using the following command::
 
 Then, include that ``private_key.pem`` in your ``settings.py``::
 
-    IDP_OPENID_CONNECT_PRIVATE_KEY = """
+    IDP_OIDC_PRIVATE_KEY = """
     -----BEGIN PRIVATE KEY-----
     MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQCiStSwvoSk61uf
     cQvkGDmR6gsM2QjVgKxCTPtg3tMhMO7kXq3PPMEiWlF49JicjPWs5vkYcLAsWNVE

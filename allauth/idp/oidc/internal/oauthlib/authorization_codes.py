@@ -4,7 +4,7 @@ from django.contrib.auth import get_user_model
 from django.core.cache import cache
 
 from allauth.account.internal.userkit import str_to_user_id, user_id_to_str
-from allauth.idp.protocols.openid_connect import app_settings
+from allauth.idp.oidc import app_settings
 
 
 def cache_key(client_id: str, code: str) -> str:

@@ -2,7 +2,7 @@ from django import forms
 from django.forms import widgets
 from django.utils.translation import gettext as _
 
-from allauth.idp.protocols.openid_connect.adapter import get_adapter
+from allauth.idp.oidc.adapter import get_adapter
 
 
 class AuthorizeForm(forms.Form):

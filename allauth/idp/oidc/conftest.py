@@ -8,11 +8,11 @@ from django.utils import timezone
 import pytest
 
 from allauth.core.context import request_context
-from allauth.idp.protocols.openid_connect.adapter import get_adapter
-from allauth.idp.protocols.openid_connect.internal.oauthlib.request_validator import (
+from allauth.idp.oidc.adapter import get_adapter
+from allauth.idp.oidc.internal.oauthlib.request_validator import (
     OAuthLibRequestValidator,
 )
-from allauth.idp.protocols.openid_connect.models import Client, Token
+from allauth.idp.oidc.models import Client, Token
 
 
 @pytest.fixture

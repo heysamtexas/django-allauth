@@ -1,6 +1,6 @@
 from django.urls import include, path
 
-from allauth.idp.protocols.openid_connect import views
+from allauth.idp.oidc import views
 
 
 app_name = "openid_connect"

@@ -2,7 +2,7 @@ Introduction
 ============
 
 The ``allauth.idp`` package offers an out of the box OpenID Connect provider by
-means of the ``allauth.idp.protocols.openid_connect`` Django application. The
+means of the ``allauth.idp.oidc`` Django application. The
 provider functionality is dependent on the base ``allauth.account`` handling,
 and works seamlessly with any of the other allauth packages.
 

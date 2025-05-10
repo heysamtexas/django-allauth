@@ -10,8 +10,8 @@ import jwt
 import pytest
 from pytest_django.asserts import assertTemplateUsed
 
-from allauth.idp.protocols.openid_connect.adapter import get_adapter
-from allauth.idp.protocols.openid_connect.models import Token
+from allauth.idp.oidc.adapter import get_adapter
+from allauth.idp.oidc.models import Token
 
 
 def test_cancel_authorization(auth_client, oidc_client):

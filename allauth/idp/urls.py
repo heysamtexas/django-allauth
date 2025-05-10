@@ -3,5 +3,5 @@ from django.urls import include, path
 
 app_name = "idp"
 urlpatterns = [
-    path("", include("allauth.idp.protocols.openid_connect.urls")),
+    path("", include("allauth.idp.oidc.urls")),
 ]

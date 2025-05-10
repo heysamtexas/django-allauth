@@ -1,12 +1,10 @@
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from allauth.idp.protocols.openid_connect.contrib.rest_framework.authentication import (
+from allauth.idp.oidc.contrib.rest_framework.authentication import (
     TokenAuthentication,
 )
-from allauth.idp.protocols.openid_connect.contrib.rest_framework.permissions import (
-    TokenPermission,
-)
+from allauth.idp.oidc.contrib.rest_framework.permissions import TokenPermission
 
 
 class ResourceView(APIView):

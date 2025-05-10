@@ -1,11 +1,7 @@
 from rest_framework.authentication import BaseAuthentication
 
-from allauth.idp.protocols.openid_connect.internal.oauthlib.server import (
-    get_server,
-)
-from allauth.idp.protocols.openid_connect.internal.oauthlib.utils import (
-    extract_params,
-)
+from allauth.idp.oidc.internal.oauthlib.server import get_server
+from allauth.idp.oidc.internal.oauthlib.utils import extract_params
 
 
 class TokenAuthentication(BaseAuthentication):

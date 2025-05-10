@@ -141,7 +141,7 @@ except ImportError:
     pass
 
 
-IDP_OPENID_CONNECT_PRIVATE_KEY = """
+IDP_OIDC_PRIVATE_KEY = """
 -----BEGIN PRIVATE KEY-----
 MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDAvGhvhFJkUwEa
 jq48SQ2rWHxPC/kbG9lJb0cl6qjaLA27atC/aCdmnlMnnng7PrjfOLtPatXjuKk3

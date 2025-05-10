@@ -22,19 +22,17 @@ from allauth.account import app_settings as account_settings
 from allauth.account.internal.decorators import login_not_required
 from allauth.core.internal import jwkkit
 from allauth.core.internal.httpkit import add_query_params
-from allauth.idp.protocols.openid_connect import app_settings
-from allauth.idp.protocols.openid_connect.adapter import get_adapter
-from allauth.idp.protocols.openid_connect.forms import AuthorizeForm
-from allauth.idp.protocols.openid_connect.internal.oauthlib.server import (
-    get_server,
-)
-from allauth.idp.protocols.openid_connect.internal.oauthlib.utils import (
+from allauth.idp.oidc import app_settings
+from allauth.idp.oidc.adapter import get_adapter
+from allauth.idp.oidc.forms import AuthorizeForm
+from allauth.idp.oidc.internal.oauthlib.server import get_server
+from allauth.idp.oidc.internal.oauthlib.utils import (
     convert_response,
     extract_params,
     respond_html_error,
     respond_json_error,
 )
-from allauth.idp.protocols.openid_connect.models import Client
+from allauth.idp.oidc.models import Client
 from allauth.utils import build_absolute_uri
 
 

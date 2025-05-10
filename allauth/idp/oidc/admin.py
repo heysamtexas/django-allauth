@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from allauth.idp.protocols.openid_connect.models import Client, Token
+from allauth.idp.oidc.models import Client, Token
 
 
 @admin.register(Client)

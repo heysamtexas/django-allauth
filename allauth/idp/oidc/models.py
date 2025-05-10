@@ -6,7 +6,7 @@ from django.db.models import Q
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
-from allauth.idp.protocols.openid_connect.adapter import get_adapter
+from allauth.idp.oidc.adapter import get_adapter
 
 
 def default_client_id() -> str:

@@ -1,9 +1,7 @@
 from rest_framework.permissions import BasePermission
 
-from allauth.idp.protocols.openid_connect.internal.scope import (
-    is_scope_granted,
-)
-from allauth.idp.protocols.openid_connect.models import Token
+from allauth.idp.oidc.internal.scope import is_scope_granted
+from allauth.idp.oidc.models import Token
 
 
 class TokenPermission(BasePermission):

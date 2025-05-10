@@ -7,11 +7,11 @@ from django.utils.translation import gettext_lazy as _
 
 from allauth.account.internal.userkit import str_to_user_id, user_id_to_str
 from allauth.core.internal.adapter import BaseAdapter
-from allauth.idp.protocols.openid_connect import app_settings
+from allauth.idp.oidc import app_settings
 from allauth.utils import import_attribute
 
 
-class DefaultOpenIDConnectAdapter(BaseAdapter):
+class DefaultOIDCAdapter(BaseAdapter):
     scope_display = {
         "openid": _("View your user ID"),
         "email": _("View your email address"),
@@ -81,5 +81,5 @@ class DefaultOpenIDConnectAdapter(BaseAdapter):
         return get_user_model().objects.filter(pk=pk).first()
 
 
-def get_adapter() -> DefaultOpenIDConnectAdapter:
+def get_adapter() -> DefaultOIDCAdapter:
     return import_attribute(app_settings.ADAPTER)()

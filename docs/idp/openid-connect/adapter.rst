@@ -1,5 +1,5 @@
 Adapter
 =======
 
-.. autoclass:: allauth.idp.protocols.openid_connect.adapter.DefaultOpenIDConnectAdapter
+.. autoclass:: allauth.idp.oidc.adapter.DefaultOIDCAdapter
    :members:

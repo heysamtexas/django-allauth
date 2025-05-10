@@ -2,7 +2,7 @@ from pathlib import Path
 
 from django.contrib.auth.hashers import PBKDF2PasswordHasher
 
-from tests.common.settings import IDP_OPENID_CONNECT_PRIVATE_KEY  # noqa
+from tests.common.settings import IDP_OIDC_PRIVATE_KEY  # noqa
 from tests.common.settings import INSTALLED_SOCIALACCOUNT_APPS
 
 
@@ -76,7 +76,7 @@ INSTALLED_APPS = (
     "allauth.mfa",
     "allauth.usersessions",
     "allauth.headless",
-    "allauth.idp.protocols.openid_connect",
+    "allauth.idp.oidc",
 ) + INSTALLED_SOCIALACCOUNT_APPS
 
 AUTHENTICATION_BACKENDS = (
