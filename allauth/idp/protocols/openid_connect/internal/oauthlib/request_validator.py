@@ -229,6 +229,7 @@ class OAuthLibRequestValidator(RequestValidator):
         request.user = instance.user
         request.client = instance.client
         request.scopes = granted_scopes
+        request.access_token = instance
         return True
 
     def revoke_token(self, token, token_type_hint, request, *args, **kwargs):
