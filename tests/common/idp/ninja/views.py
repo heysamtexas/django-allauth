@@ -1,0 +1,13 @@
+from ninja import NinjaAPI
+
+from allauth.idp.protocols.openid_connect.contrib.ninja.security import (
+    TokenAuth,
+)
+
+
+api = NinjaAPI()
+
+
+@api.get("/resource", auth=[TokenAuth(scope=["view-resource"])])
+def resource(request):
+    return {"resource": "ok"}
