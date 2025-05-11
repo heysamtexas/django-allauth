@@ -821,7 +821,7 @@ class RequestLoginCodeForm(forms.Form):
         adapter = get_adapter()
         email = self.cleaned_data["email"]
         users = filter_users_by_email(email, is_active=True, prefer_verified=True)
-        if not app_settings.PREVENT_ENUMERATION:
+        if email and not app_settings.PREVENT_ENUMERATION:
             if not users:
                 raise adapter.validation_error("unknown_email")
         if not ratelimit.consume(
