@@ -82,8 +82,8 @@ class OAuthLibRequestValidator(RequestValidator):
 
     def confirm_redirect_uri(
         self, client_id, code, redirect_uri, client, request, *args, **kwargs
-    ):
-        authorization_code = authorization_codes.lookup(client_id, code)
+    ) -> bool:
+        authorization_code = self._lookup_authorization_code(request, client_id, code)
         if not authorization_code:
             return False
         return redirect_uri == authorization_code["redirect_uri"]
@@ -190,25 +190,29 @@ class OAuthLibRequestValidator(RequestValidator):
     def get_authorization_code_scopes(
         self, client_id, code, redirect_uri, request
     ) -> List[str]:
-        authorization_code = authorization_codes.lookup(client_id, code)
+        authorization_code = self._lookup_authorization_code(request, client_id, code)
         if not authorization_code:
             return []
         return authorization_code["scopes"]
 
     def get_authorization_code_nonce(self, client_id, code, redirect_uri, request):
-        authorization_code = authorization_codes.lookup(client_id, code)
+        authorization_code = self._lookup_authorization_code(request, client_id, code)
         return authorization_code["code"].get("nonce")
 
     def get_code_challenge(self, code, request):
         ret = None
-        authorization_code = authorization_codes.lookup(request.client_id, code)
+        authorization_code = self._lookup_authorization_code(
+            request, request.client_id, code
+        )
         if pkce := authorization_code.get("pkce"):
             ret = pkce["code_challenge"]
         return ret
 
     def get_code_challenge_method(self, code, request):
         ret = None
-        authorization_code = authorization_codes.lookup(request.client_id, code)
+        authorization_code = self._lookup_authorization_code(
+            request, request.client_id, code
+        )
         if pkce := authorization_code.get("pkce"):
             ret = pkce["code_challenge_method"]
         return ret
@@ -334,3 +338,15 @@ class OAuthLibRequestValidator(RequestValidator):
     def _use_client(self, request, client: Client) -> None:
         request.client = client
         request.client.client_id = client.id  # type:ignore[attr-defined]
+
+    def _lookup_authorization_code(
+        self, request, client_id: str, code: str
+    ) -> Optional[dict]:
+        cache = request._code_cache = getattr(request, "_code_cache", {})
+        key = (client_id, code)
+        if key in cache:
+            authorization_code = cache[key]
+        else:
+            authorization_code = authorization_codes.lookup(client_id, code)
+            cache[key] = authorization_code
+        return authorization_code
