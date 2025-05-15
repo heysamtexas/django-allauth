@@ -452,7 +452,7 @@ def test_jwks_view(client):
     }
 
 
-def test_configuration_view(client):
+def test_configuration_view(client, oidc_client):
     resp = client.get(reverse("idp:openid_connect:configuration"))
     assert resp.status_code == HTTPStatus.OK
     assert resp.json() == {
@@ -460,7 +460,7 @@ def test_configuration_view(client):
         "id_token_signing_alg_values_supported": ["RS256"],
         "issuer": "http://testserver",
         "jwks_uri": "http://testserver/.well-known/jwks.json",
-        "response_types_supported": ["code"],
+        "response_types_supported": ["code", "token"],
         "revocation_endpoint": "http://testserver/identity/oidc/revoke",
         "subject_types_supported": ["public"],
         "token_endpoint": "http://testserver/identity/oidc/token",

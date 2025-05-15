@@ -1,3 +1,5 @@
+from typing import List
+
 from django.contrib.auth.decorators import login_required
 from django.contrib.sites.shortcuts import get_current_site
 from django.core.exceptions import PermissionDenied
@@ -54,15 +56,19 @@ class ConfigurationView(View):
             ),
             "jwks_uri": build_absolute_uri(request, reverse("idp:openid_connect:jwks")),
             "issuer": get_adapter().get_issuer(),
-            "response_types_supported": [
-                "code",
-            ],
+            "response_types_supported": self._get_response_types_supported(),
             "subject_types_supported": ["public"],
             "id_token_signing_alg_values_supported": ["RS256"],
         }
         response = JsonResponse(data)
         response["Access-Control-Allow-Origin"] = "*"
         return response
+
+    def _get_response_types_supported(self) -> List[str]:
+        response_types = set()
+        for client in Client.objects.only("response_types").iterator():
+            response_types.update(client.get_response_types())
+        return list(sorted(response_types))
 
 
 configuration = ConfigurationView.as_view()
