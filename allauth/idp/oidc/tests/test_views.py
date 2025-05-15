@@ -12,6 +12,9 @@ from pytest_django.asserts import assertTemplateUsed
 
 from allauth.idp.oidc.adapter import get_adapter
 from allauth.idp.oidc.models import Token
+from allauth.socialaccount.providers.oauth2.utils import (
+    generate_code_challenge,
+)
 
 
 def test_cancel_authorization(auth_client, oidc_client):
@@ -466,3 +469,84 @@ def test_configuration_view(client, oidc_client):
         "token_endpoint": "http://testserver/identity/oidc/token",
         "userinfo_endpoint": "http://testserver/identity/oidc/userinfo",
     }
+
+
+@pytest.mark.parametrize("valid_code_verifier", [False, True])
+def test_authorization_code_flow_with_pkce(
+    auth_client, user, oidc_client, enable_cache, valid_code_verifier
+):
+    redirect_uri = oidc_client.get_redirect_uris()[0]
+    scopes = ["openid", "profile", "email"]
+    pkce = generate_code_challenge()
+    resp = auth_client.get(
+        reverse("idp:openid_connect:authorize")
+        + "?"
+        + urlencode(
+            {
+                "client_id": oidc_client.id,
+                "redirect_uri": redirect_uri,
+                "response_type": "code",
+                "scope": " ".join(scopes),
+                "nonce": "some-nonce",
+                "state": "some-state",
+                "code_challenge": pkce["code_challenge"],
+                "code_challenge_method": pkce["code_challenge_method"],
+            }
+        )
+    )
+    assert resp.status_code == HTTPStatus.OK
+    assertTemplateUsed(resp, "idp/openid_connect/authorize_form.html")
+    resp = auth_client.post(
+        reverse("idp:openid_connect:authorize"),
+        {
+            "scopes": scopes,
+            "action": "grant",
+            "request": resp.context["form"]["request"].value(),
+        },
+    )
+    assert resp.status_code == HTTPStatus.FOUND
+    redirected_uri = resp["location"]
+    assert redirected_uri.startswith(redirected_uri)
+    parts = urlparse(redirected_uri)
+    params = parse_qs(parts.query)
+    code = params["code"][0]
+    assert params["state"][0] == "some-state"
+    resp = auth_client.post(
+        reverse("idp:openid_connect:token"),
+        {
+            "code": code,
+            "grant_type": "authorization_code",
+            "client_id": oidc_client.id,
+            "client_secret": oidc_client.get_secret(),
+            "redirect_uri": redirect_uri,
+            "code_verifier": pkce["code_verifier"] if valid_code_verifier else "WRONG",
+        },
+    )
+    if not valid_code_verifier:
+        assert resp.status_code == HTTPStatus.BAD_REQUEST
+        return
+
+    assert resp.status_code == HTTPStatus.OK
+    data = resp.json()
+    assert set(data.keys()) == {
+        "access_token",
+        "expires_in",
+        "token_type",
+        "scope",
+        "refresh_token",
+        "id_token",
+    }
+
+    # ID token
+    id_token = data["id_token"]
+    decoded = jwt.decode(id_token, options={"verify_signature": False})
+    assert decoded["sub"] == str(user.pk)
+    assert decoded["nonce"] == "some-nonce"
+    if "email" in scopes:
+        assert decoded["email"] == user.email
+    else:
+        assert "email" not in decoded
+    if "profile" in scopes:
+        assert decoded["preferred_username"] == user.username
+    else:
+        assert "preferred_username" not in decoded

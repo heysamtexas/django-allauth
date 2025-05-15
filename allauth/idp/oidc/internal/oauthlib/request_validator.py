@@ -192,6 +192,20 @@ class OAuthLibRequestValidator(RequestValidator):
         authorization_code = authorization_codes.lookup(client_id, code)
         return authorization_code["code"].get("nonce")
 
+    def get_code_challenge(self, code, request):
+        ret = None
+        authorization_code = authorization_codes.lookup(request.client_id, code)
+        if pkce := authorization_code.get("pkce"):
+            ret = pkce["code_challenge"]
+        return ret
+
+    def get_code_challenge_method(self, code, request):
+        ret = None
+        authorization_code = authorization_codes.lookup(request.client_id, code)
+        if pkce := authorization_code.get("pkce"):
+            ret = pkce["code_challenge_method"]
+        return ret
+
     def finalize_id_token(self, id_token: dict, token: dict, token_handler, request):
         """
         https://openid.net/specs/openid-connect-core-1_0.html#StandardClaims
