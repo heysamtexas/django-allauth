@@ -37,6 +37,10 @@ class Client(models.Model):
         CLIENT_CREDENTIALS = "client_credentials", _("Client credentials")
         REFRESH_TOKEN = "refresh_token", _("Refresh token")
 
+    class Type(models.TextChoices):
+        CONFIDENTIAL = "confidential", _("Confidential")
+        PUBLIC = "public", _("Public")
+
     id = models.CharField(
         primary_key=True,
         max_length=100,
@@ -51,6 +55,7 @@ class Client(models.Model):
             "The scope(s) the client is allowed to request. Provide one value per line, e.g.: openid(ENTER)profile(ENTER)email(ENTER)"
         ),
     )
+    type = models.CharField(max_length=20, default=Type.CONFIDENTIAL)
     grant_types = models.TextField(
         default=GrantType.AUTHORIZATION_CODE,
         help_text=_(

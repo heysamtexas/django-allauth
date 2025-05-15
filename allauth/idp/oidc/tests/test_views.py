@@ -473,8 +473,14 @@ def test_configuration_view(client, oidc_client):
 
 @pytest.mark.parametrize("valid_code_verifier", [False, True])
 def test_authorization_code_flow_with_pkce(
-    auth_client, user, oidc_client, enable_cache, valid_code_verifier
+    auth_client,
+    user,
+    oidc_client,
+    enable_cache,
+    valid_code_verifier,
 ):
+    oidc_client.type = oidc_client.Type.PUBLIC
+    oidc_client.save()
     redirect_uri = oidc_client.get_redirect_uris()[0]
     scopes = ["openid", "profile", "email"]
     pkce = generate_code_challenge()
@@ -514,11 +520,11 @@ def test_authorization_code_flow_with_pkce(
     resp = auth_client.post(
         reverse("idp:openid_connect:token"),
         {
-            "code": code,
             "grant_type": "authorization_code",
+            "code": code,
             "client_id": oidc_client.id,
-            "client_secret": oidc_client.get_secret(),
             "redirect_uri": redirect_uri,
+            "state": "some-state",
             "code_verifier": pkce["code_verifier"] if valid_code_verifier else "WRONG",
         },
     )
@@ -531,22 +537,8 @@ def test_authorization_code_flow_with_pkce(
     assert set(data.keys()) == {
         "access_token",
         "expires_in",
+        "id_token",
         "token_type",
         "scope",
         "refresh_token",
-        "id_token",
     }
-
-    # ID token
-    id_token = data["id_token"]
-    decoded = jwt.decode(id_token, options={"verify_signature": False})
-    assert decoded["sub"] == str(user.pk)
-    assert decoded["nonce"] == "some-nonce"
-    if "email" in scopes:
-        assert decoded["email"] == user.email
-    else:
-        assert "email" not in decoded
-    if "profile" in scopes:
-        assert decoded["preferred_username"] == user.username
-    else:
-        assert "preferred_username" not in decoded

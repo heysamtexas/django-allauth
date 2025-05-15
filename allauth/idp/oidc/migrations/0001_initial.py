@@ -41,6 +41,7 @@ class Migration(migrations.Migration):
                         help_text="The scope(s) the client is allowed to request. Provide one value per line, e.g.: openid(ENTER)profile(ENTER)email(ENTER)"
                     ),
                 ),
+                ("type", models.CharField(default="confidential", max_length=20)),
                 (
                     "grant_types",
                     models.TextField(

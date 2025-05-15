@@ -1,6 +1,6 @@
 import uuid
 from datetime import timedelta
-from typing import List
+from typing import List, Optional
 
 from django.utils import timezone
 
@@ -20,10 +20,10 @@ from allauth.idp.oidc.models import Client, Token
 class OAuthLibRequestValidator(RequestValidator):
 
     def validate_client_id(self, client_id: str, request):
-        client = Client.objects.filter(id=client_id).first()
+        client = self._lookup_client(request, client_id)
         if not client:
             return False
-        request.client = client
+        self._use_client(request, client)
         return True
 
     def validate_redirect_uri(self, client_id, redirect_uri, request, *args, **kwargs):
@@ -51,18 +51,25 @@ class OAuthLibRequestValidator(RequestValidator):
         # (end WORKAROUND)
         authorization_codes.create(client_id, code, request)
 
-    def authenticate_client(self, request, *args, **kwargs):
+    def authenticate_client_id(self, client_id, request, *args, **kwargs) -> bool:
+        """Ensure client_id belong to a non-confidential client."""
+        client = self._lookup_client(request, client_id)
+        if not client or client.type != Client.Type.PUBLIC:
+            return False
+        self._use_client(request, client)
+        return True
+
+    def authenticate_client(self, request, *args, **kwargs) -> bool:
         client_id = getattr(request, "client_id", None)
         client_secret = getattr(request, "client_secret", None)
         if not isinstance(client_id, str) or not isinstance(client_secret, str):
             return False
-        client = Client.objects.filter(id=client_id).first()
+        client = self._lookup_client(request, client_id)
         if not client:
             return False
         if client.get_secret() != client_secret:
             return False
-        request.client = client
-        request.client.client_id = client_id
+        self._use_client(request, client)
         return True
 
     def validate_grant_type(
@@ -237,7 +244,7 @@ class OAuthLibRequestValidator(RequestValidator):
         if not set(scopes).issubset(set(granted_scopes)):
             return False
         request.user = instance.user
-        request.client = instance.client
+        self._use_client(request, instance.client)
         request.scopes = granted_scopes
         request.access_token = instance
         return True
@@ -305,3 +312,25 @@ class OAuthLibRequestValidator(RequestValidator):
 
     def get_original_scopes(self, refresh_token, request, *args, **kwargs):
         return request._refresh_token_instance.get_scopes()
+
+    def client_authentication_required(self, request, *args, **kwargs) -> bool:
+        if request.client_id and request.client_secret:
+            return True
+
+        client = self._lookup_client(request, request.client_id)
+        if client and client.type == Client.Type.PUBLIC:
+            return False
+        return super().client_authentication_required(request, *args, **kwargs)
+
+    def _lookup_client(self, request, client_id) -> Optional[Client]:
+        cache = request._client_cache = getattr(request, "_client_cache", {})
+        if client_id in cache:
+            client = cache[client_id]
+        else:
+            client = Client.objects.filter(id=client_id).first()
+            cache[client_id] = client
+        return client
+
+    def _use_client(self, request, client: Client) -> None:
+        request.client = client
+        request.client.client_id = client.id  # type:ignore[attr-defined]

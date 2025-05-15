@@ -34,3 +34,9 @@ Response types
 
 Skip consent
     When enabled, the consent page is silently skipped and all requested scopes are granted.
+
+Type
+    Confidential clients are clients that are able to securely authenticate with
+    the authorization server as they are able to keep their registered client
+    secret safe. Public clients, such as applications running in a browser or
+    mobile device, are unable to keep the client secrets safe.
