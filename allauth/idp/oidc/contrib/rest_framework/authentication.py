@@ -5,6 +5,10 @@ from allauth.idp.oidc.internal.oauthlib.utils import extract_params
 
 
 class TokenAuthentication(BaseAuthentication):
+    """
+    Use the OIDC access token to authenticate the request.
+    """
+
     def authenticate(self, request):
         server = get_server()
         orequest = extract_params(request)

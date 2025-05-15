@@ -10,3 +10,4 @@ OpenID Connect
    views
    clients
    adapter
+   integrations
