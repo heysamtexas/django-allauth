@@ -16,8 +16,15 @@ from allauth.idp.oidc.models import Client, Token
 
 
 @pytest.fixture
-def oidc_client(db):
+def oidc_client_secret():
+    return uuid.uuid4().hex
+
+
+@pytest.fixture
+def oidc_client(db, oidc_client_secret):
     client = Client.objects.create()
+    client.set_secret(oidc_client_secret)
+
     client.set_redirect_uris(["https://client/callback"])
     client.set_scopes(["profile", "openid", "email"])
     client.set_grant_types(

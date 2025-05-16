@@ -25,18 +25,6 @@ class DefaultOIDCAdapter(BaseAdapter):
         "profile": _("View your basic profile information"),
     }
 
-    def encrypt(self, text: str) -> str:
-        """Secrets such as the client secret are stored in the database.  This
-        hook can be used to encrypt those so that they are not stored in the
-        clear in the database.
-        """
-        return text
-
-    def decrypt(self, encrypted_text: str) -> str:
-        """Counterpart of ``encrypt()``."""
-        text = encrypted_text
-        return text
-
     def generate_client_id(self) -> str:
         """
         The client ID to use for newly created clients.

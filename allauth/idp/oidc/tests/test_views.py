@@ -50,7 +50,9 @@ def test_cancel_authorization(auth_client, oidc_client):
         ("openid",),
     ],
 )
-def test_authorization_code_flow(auth_client, user, oidc_client, enable_cache, scopes):
+def test_authorization_code_flow(
+    auth_client, user, oidc_client, oidc_client_secret, enable_cache, scopes
+):
     redirect_uri = oidc_client.get_redirect_uris()[0]
     resp = auth_client.get(
         reverse("idp:oidc:authorize")
@@ -89,7 +91,7 @@ def test_authorization_code_flow(auth_client, user, oidc_client, enable_cache, s
             "code": code,
             "grant_type": "authorization_code",
             "client_id": oidc_client.id,
-            "client_secret": oidc_client.get_secret(),
+            "client_secret": oidc_client_secret,
             "redirect_uri": redirect_uri,
         },
     )
@@ -120,7 +122,7 @@ def test_authorization_code_flow(auth_client, user, oidc_client, enable_cache, s
 
 
 def test_authorization_code_flow_skip_consent(
-    auth_client, user, oidc_client, enable_cache
+    auth_client, user, oidc_client, oidc_client_secret, enable_cache
 ):
     oidc_client.skip_consent = True
     oidc_client.save()
@@ -151,7 +153,7 @@ def test_authorization_code_flow_skip_consent(
             "code": code,
             "grant_type": "authorization_code",
             "client_id": oidc_client.id,
-            "client_secret": oidc_client.get_secret(),
+            "client_secret": oidc_client_secret,
             "redirect_uri": redirect_uri,
         },
     )
@@ -247,14 +249,16 @@ def test_userinfo(client, oidc_client, user, access_token_generator, scopes):
         assert "email" not in data
 
 
-def test_revoke_access_token(client, oidc_client, user, access_token_generator):
+def test_revoke_access_token(
+    client, oidc_client, oidc_client_secret, user, access_token_generator
+):
     token, instance = access_token_generator(oidc_client, user)
     _, instance_to_keep = access_token_generator(oidc_client, user)
     resp = client.post(
         reverse("idp:oidc:revoke"),
         data={
             "client_id": oidc_client.id,
-            "client_secret": oidc_client.secret,
+            "client_secret": oidc_client_secret,
             "token": token,
         },
     )
@@ -263,12 +267,12 @@ def test_revoke_access_token(client, oidc_client, user, access_token_generator):
     assert Token.objects.filter(pk=instance_to_keep.pk).exists()
 
 
-def test_client_credentials(client, oidc_client):
+def test_client_credentials(client, oidc_client, oidc_client_secret):
     resp = client.post(
         reverse("idp:oidc:token"),
         data={
             "client_id": oidc_client.id,
-            "client_secret": oidc_client.secret,
+            "client_secret": oidc_client_secret,
             "scope": "profile email",
             "grant_type": "client_credentials",
         },
@@ -286,12 +290,14 @@ def test_client_credentials(client, oidc_client):
     assert token.get_scopes() == ["profile", "email"]
 
 
-def test_password_grant_is_blocked(client, oidc_client, user, user_password):
+def test_password_grant_is_blocked(
+    client, oidc_client, oidc_client_secret, user, user_password
+):
     resp = client.post(
         reverse("idp:oidc:token"),
         data={
             "client_id": oidc_client.id,
-            "client_secret": oidc_client.secret,
+            "client_secret": oidc_client_secret,
             # These are valid credentials.
             "username": user.username,
             "password": user_password,
@@ -405,7 +411,9 @@ def test_authorization_post_is_csrf_protected(user):
     assert b"CSRF Failed" in resp.content
 
 
-def test_refresh_token(db, client, oidc_client, user, refresh_token_factory):
+def test_refresh_token(
+    db, client, oidc_client, oidc_client_secret, user, refresh_token_factory
+):
     rt, _ = refresh_token_factory(user=user, client=oidc_client)
     resp = client.post(
         reverse("idp:oidc:token"),
@@ -413,7 +421,7 @@ def test_refresh_token(db, client, oidc_client, user, refresh_token_factory):
             "refresh_token": rt,
             "grant_type": "refresh_token",
             "client_id": oidc_client.id,
-            "client_secret": oidc_client.get_secret(),
+            "client_secret": oidc_client_secret,
         },
     )
     assert resp.status_code == HTTPStatus.OK
@@ -426,14 +434,16 @@ def test_refresh_token(db, client, oidc_client, user, refresh_token_factory):
     }
 
 
-def test_revoke_refresh_token(db, client, oidc_client, user, refresh_token_factory):
+def test_revoke_refresh_token(
+    db, client, oidc_client, oidc_client_secret, user, refresh_token_factory
+):
     token_value, token_instance = refresh_token_factory(user=user, client=oidc_client)
     resp = client.post(
         reverse("idp:oidc:revoke"),
         {
             "token": token_value,
             "client_id": oidc_client.id,
-            "client_secret": oidc_client.get_secret(),
+            "client_secret": oidc_client_secret,
         },
     )
     assert resp.status_code == HTTPStatus.OK

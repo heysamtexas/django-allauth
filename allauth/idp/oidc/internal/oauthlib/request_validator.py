@@ -70,7 +70,7 @@ class OAuthLibRequestValidator(RequestValidator):
         client = self._lookup_client(request, client_id)
         if not client:
             return False
-        if client.get_secret() != client_secret:
+        if not client.check_secret(client_secret):
             return False
         self._use_client(request, client)
         return True

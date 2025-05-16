@@ -1,6 +1,7 @@
 from typing import List
 
 from django.conf import settings
+from django.contrib.auth.hashers import check_password, make_password
 from django.db import models
 from django.db.models import Q
 from django.utils import timezone
@@ -12,13 +13,13 @@ from allauth.idp.oidc.adapter import get_adapter
 def default_client_id() -> str:
     adapter = get_adapter()
     client_id = adapter.generate_client_id()
-    return adapter.encrypt(client_id)
+    return client_id
 
 
 def default_client_secret() -> str:
     adapter = get_adapter()
     client_secret = adapter.generate_client_secret()
-    return adapter.encrypt(client_secret)
+    return make_password(client_secret)
 
 
 def _values_from_text(text) -> List[str]:
@@ -121,11 +122,11 @@ class Client(models.Model):
     def set_grant_types(self, grant_types: List[str]):
         self.grant_types = _values_to_text(grant_types)
 
-    def get_secret(self) -> str:
-        return get_adapter().decrypt(self.secret)
-
     def set_secret(self, secret) -> None:
-        self.secret = get_adapter().encrypt(secret)
+        self.secret = make_password(secret)
+
+    def check_secret(self, secret: str) -> bool:
+        return check_password(secret, self.secret)
 
     def __str__(self) -> str:
         return self.id
