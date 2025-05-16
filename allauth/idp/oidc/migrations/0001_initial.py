@@ -25,6 +25,7 @@ class Migration(migrations.Migration):
                         max_length=100,
                         primary_key=True,
                         serialize=False,
+                        verbose_name="Client ID",
                     ),
                 ),
                 ("name", models.CharField(max_length=100)),
@@ -38,10 +39,21 @@ class Migration(migrations.Migration):
                 (
                     "scopes",
                     models.TextField(
-                        help_text="The scope(s) the client is allowed to request. Provide one value per line, e.g.: openid(ENTER)profile(ENTER)email(ENTER)"
+                        default="openid",
+                        help_text="The scope(s) the client is allowed to request. Provide one value per line, e.g.: openid(ENTER)profile(ENTER)email(ENTER)",
                     ),
                 ),
-                ("type", models.CharField(default="confidential", max_length=20)),
+                (
+                    "type",
+                    models.CharField(
+                        choices=[
+                            ("confidential", "Confidential"),
+                            ("public", "Public"),
+                        ],
+                        default="confidential",
+                        max_length=20,
+                    ),
+                ),
                 (
                     "grant_types",
                     models.TextField(
@@ -52,7 +64,9 @@ class Migration(migrations.Migration):
                 (
                     "redirect_uris",
                     models.TextField(
-                        help_text="A list of allowed redirect (callback) URLs, one per line."
+                        blank=True,
+                        default="",
+                        help_text="A list of allowed redirect (callback) URLs, one per line.",
                     ),
                 ),
                 (
@@ -61,13 +75,14 @@ class Migration(migrations.Migration):
                         blank=True,
                         default="",
                         help_text="A list of allowed origins for cross-origin requests, one per line.",
+                        verbose_name="CORS allowed origins",
                     ),
                 ),
                 (
                     "response_types",
                     models.TextField(
                         default="code",
-                        help_text="A list of allowed response types. Provide one value per line, e.g.: code(ENTER)",
+                        help_text="A list of allowed response types. Provide one value per line, e.g.: code(ENTER)id_token token(ENTER)",
                     ),
                 ),
                 (

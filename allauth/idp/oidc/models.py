@@ -46,6 +46,7 @@ class Client(models.Model):
         primary_key=True,
         max_length=100,
         default=default_client_id,
+        verbose_name="Client ID",
     )
     name = models.CharField(
         max_length=100,
@@ -55,8 +56,11 @@ class Client(models.Model):
         help_text=_(
             "The scope(s) the client is allowed to request. Provide one value per line, e.g.: openid(ENTER)profile(ENTER)email(ENTER)"
         ),
+        default="openid",
     )
-    type = models.CharField(max_length=20, default=Type.CONFIDENTIAL)
+    type = models.CharField(
+        max_length=20, default=Type.CONFIDENTIAL, choices=Type.choices
+    )
     grant_types = models.TextField(
         default=GrantType.AUTHORIZATION_CODE,
         help_text=_(
@@ -64,7 +68,9 @@ class Client(models.Model):
         ),
     )
     redirect_uris = models.TextField(
-        help_text="A list of allowed redirect (callback) URLs, one per line."
+        help_text="A list of allowed redirect (callback) URLs, one per line.",
+        blank=True,
+        default="",
     )
     cors_origins = models.TextField(
         blank=True,
@@ -72,11 +78,12 @@ class Client(models.Model):
             "A list of allowed origins for cross-origin requests, one per line."
         ),
         default="",
+        verbose_name="CORS allowed origins",
     )
     response_types = models.TextField(
         default="code",
         help_text=_(
-            "A list of allowed response types. Provide one value per line, e.g.: code(ENTER)"
+            "A list of allowed response types. Provide one value per line, e.g.: code(ENTER)id_token token(ENTER)"
         ),
     )
     owner = models.ForeignKey(
