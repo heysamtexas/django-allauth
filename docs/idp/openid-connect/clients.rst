@@ -3,12 +3,16 @@ Clients
 
 The Open ID Connect clients (also commonly referred to as consumers, or applications) can be managed via the Django admin. A typical client configuration has the following properties:
 
+Name
+    The name of the client. This is displayed in the authorization page.
+
 ID
     The client ID. This field is automatically populated.
 
 Secret
-    The client secret. This field is automatically populated. Note that you use encrypted
-    secrets by providing your own ``encrypt()`` / ``decrypt()`` adapter methods.
+    The client secret. When adding clients using the Django admin, the secret is
+    automatically generated and displayed only once via a message at creation
+    time.
 
 Scopes
     The scope(s) the client is allowed to request. Values are provide line by line, e.g.::
