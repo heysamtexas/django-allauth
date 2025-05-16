@@ -3,7 +3,7 @@ from django.urls import include, path
 from allauth.idp.oidc import views
 
 
-app_name = "openid_connect"
+app_name = "oidc"
 urlpatterns = [
     path(
         ".well-known/",

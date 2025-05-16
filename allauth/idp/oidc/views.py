@@ -43,18 +43,16 @@ class ConfigurationView(View):
     def get(self, request):
         data = {
             "authorization_endpoint": build_absolute_uri(
-                request, reverse("idp:openid_connect:authorize")
+                request, reverse("idp:oidc:authorize")
             ),
             "revocation_endpoint": build_absolute_uri(
-                request, reverse("idp:openid_connect:revoke")
+                request, reverse("idp:oidc:revoke")
             ),
-            "token_endpoint": build_absolute_uri(
-                request, reverse("idp:openid_connect:token")
-            ),
+            "token_endpoint": build_absolute_uri(request, reverse("idp:oidc:token")),
             "userinfo_endpoint": build_absolute_uri(
-                request, reverse("idp:openid_connect:userinfo")
+                request, reverse("idp:oidc:userinfo")
             ),
-            "jwks_uri": build_absolute_uri(request, reverse("idp:openid_connect:jwks")),
+            "jwks_uri": build_absolute_uri(request, reverse("idp:oidc:jwks")),
             "issuer": get_adapter().get_issuer(),
             "response_types_supported": self._get_response_types_supported(),
             "subject_types_supported": ["public"],
@@ -105,7 +103,7 @@ class AuthorizeView(FormView):
         signed_request_info = request.POST.get("request")
         if not signed_request_info:
             return HttpResponseRedirect(
-                reverse("idp:openid_connect:authorize") + "?" + request.POST.urlencode()
+                reverse("idp:oidc:authorize") + "?" + request.POST.urlencode()
             )
         response = self._login_required(request)
         if response:

@@ -1,22 +1,23 @@
 from typing import Optional
 
-from django.contrib.auth import get_user_model
 from django.core.cache import cache
 
-from allauth.account.internal.userkit import str_to_user_id, user_id_to_str
 from allauth.idp.oidc import app_settings
+from allauth.idp.oidc.adapter import get_adapter
+from allauth.idp.oidc.models import Client
 
 
 def cache_key(client_id: str, code: str) -> str:
     return f"allauth.idp.oidc.authorization_code[{client_id}:{code}]"
 
 
-def create(client_id: str, code: dict, request) -> None:
+def create(client: Client, code: dict, request) -> None:
+    adapter = get_adapter()
     authorization_code = {
         "code": code,
-        "client_id": request.client_id,
+        "client_id": client.id,
         "redirect_uri": request.redirect_uri,
-        "user": user_id_to_str(request.user),
+        "sub": adapter.get_user_sub(client, request.user),
         "scopes": request.scopes,
         "claims": request.claims,
     }
@@ -27,7 +28,7 @@ def create(client_id: str, code: dict, request) -> None:
             "code_challenge_method": request.code_challenge_method,
         }
     cache.set(
-        cache_key(client_id, code["code"]),
+        cache_key(client.id, code["code"]),
         authorization_code,
         timeout=app_settings.AUTHORIZATION_CODE_EXPIRES_IN,
     )
@@ -45,11 +46,7 @@ def validate(client_id: str, code: str, request) -> bool:
     authorization_code = lookup(client_id, code)
     if not authorization_code:
         return False
-    user = (
-        get_user_model()
-        .objects.filter(pk=str_to_user_id(authorization_code["user"]))
-        .first()
-    )
+    user = get_adapter().get_user_by_sub(request.client, authorization_code["sub"])
     if not user:
         return False
     request.scopes = authorization_code["scopes"]

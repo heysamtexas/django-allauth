@@ -20,7 +20,7 @@ from allauth.socialaccount.providers.oauth2.utils import (
 def test_cancel_authorization(auth_client, oidc_client):
     redirect_uri = oidc_client.get_redirect_uris()[0]
     resp = auth_client.get(
-        reverse("idp:openid_connect:authorize")
+        reverse("idp:oidc:authorize")
         + "?"
         + urlencode(
             {
@@ -33,7 +33,7 @@ def test_cancel_authorization(auth_client, oidc_client):
     assert resp.status_code == HTTPStatus.OK
     assertTemplateUsed(resp, "idp/openid_connect/authorize_form.html")
     resp = auth_client.post(
-        reverse("idp:openid_connect:authorize"),
+        reverse("idp:oidc:authorize"),
         {
             "request": resp.context["form"]["request"].value(),
         },
@@ -53,7 +53,7 @@ def test_cancel_authorization(auth_client, oidc_client):
 def test_authorization_code_flow(auth_client, user, oidc_client, enable_cache, scopes):
     redirect_uri = oidc_client.get_redirect_uris()[0]
     resp = auth_client.get(
-        reverse("idp:openid_connect:authorize")
+        reverse("idp:oidc:authorize")
         + "?"
         + urlencode(
             {
@@ -69,7 +69,7 @@ def test_authorization_code_flow(auth_client, user, oidc_client, enable_cache, s
     assert resp.status_code == HTTPStatus.OK
     assertTemplateUsed(resp, "idp/openid_connect/authorize_form.html")
     resp = auth_client.post(
-        reverse("idp:openid_connect:authorize"),
+        reverse("idp:oidc:authorize"),
         {
             "scopes": scopes,
             "action": "grant",
@@ -84,7 +84,7 @@ def test_authorization_code_flow(auth_client, user, oidc_client, enable_cache, s
     code = params["code"][0]
     assert params["state"][0] == "some-state"
     resp = auth_client.post(
-        reverse("idp:openid_connect:token"),
+        reverse("idp:oidc:token"),
         {
             "code": code,
             "grant_type": "authorization_code",
@@ -126,7 +126,7 @@ def test_authorization_code_flow_skip_consent(
     oidc_client.save()
     redirect_uri = oidc_client.get_redirect_uris()[0]
     resp = auth_client.get(
-        reverse("idp:openid_connect:authorize")
+        reverse("idp:oidc:authorize")
         + "?"
         + urlencode(
             {
@@ -146,7 +146,7 @@ def test_authorization_code_flow_skip_consent(
     params = parse_qs(parts.query)
     code = params["code"][0]
     resp = auth_client.post(
-        reverse("idp:openid_connect:token"),
+        reverse("idp:oidc:token"),
         {
             "code": code,
             "grant_type": "authorization_code",
@@ -173,7 +173,7 @@ def test_authorize_id_token_hint_match(
     redirect_uri = oidc_client.get_redirect_uris()[0]
     # Pass along ID token as hint
     resp = auth_client.get(
-        reverse("idp:openid_connect:authorize")
+        reverse("idp:oidc:authorize")
         + "?"
         + urlencode(
             {
@@ -196,7 +196,7 @@ def test_authorize_id_token_hint_mismatch(
     redirect_uri = oidc_client.get_redirect_uris()[0]
     # Pass along ID token as hint
     resp = auth_client.get(
-        reverse("idp:openid_connect:authorize")
+        reverse("idp:oidc:authorize")
         + "?"
         + urlencode(
             {
@@ -221,7 +221,7 @@ def test_authorize_id_token_hint_mismatch(
 
 def test_userinfo_bad_token(client, oidc_client, user):
     # Pass along ID token as hint
-    resp = client.get(reverse("idp:openid_connect:userinfo"))
+    resp = client.get(reverse("idp:oidc:userinfo"))
     assert resp.status_code == HTTPStatus.UNAUTHORIZED
     assert resp.json() == {
         "error": "invalid_token",
@@ -234,7 +234,7 @@ def test_userinfo(client, oidc_client, user, access_token_generator, scopes):
     # Pass along ID token as hint
     token, _ = access_token_generator(oidc_client, user, scopes=scopes)
     resp = client.get(
-        reverse("idp:openid_connect:userinfo"),
+        reverse("idp:oidc:userinfo"),
         HTTP_AUTHORIZATION=f"Bearer {token}",
     )
     assert resp.status_code == HTTPStatus.OK
@@ -251,7 +251,7 @@ def test_revoke_access_token(client, oidc_client, user, access_token_generator):
     token, instance = access_token_generator(oidc_client, user)
     _, instance_to_keep = access_token_generator(oidc_client, user)
     resp = client.post(
-        reverse("idp:openid_connect:revoke"),
+        reverse("idp:oidc:revoke"),
         data={
             "client_id": oidc_client.id,
             "client_secret": oidc_client.secret,
@@ -265,7 +265,7 @@ def test_revoke_access_token(client, oidc_client, user, access_token_generator):
 
 def test_client_credentials(client, oidc_client):
     resp = client.post(
-        reverse("idp:openid_connect:token"),
+        reverse("idp:oidc:token"),
         data={
             "client_id": oidc_client.id,
             "client_secret": oidc_client.secret,
@@ -288,7 +288,7 @@ def test_client_credentials(client, oidc_client):
 
 def test_password_grant_is_blocked(client, oidc_client, user, user_password):
     resp = client.post(
-        reverse("idp:openid_connect:token"),
+        reverse("idp:oidc:token"),
         data={
             "client_id": oidc_client.id,
             "client_secret": oidc_client.secret,
@@ -311,7 +311,7 @@ def test_implicit_grant_flow(auth_client, user, oidc_client, enable_cache):
     redirect_uri = oidc_client.get_redirect_uris()[0]
     scopes = ["openid", "profile"]
     resp = auth_client.get(
-        reverse("idp:openid_connect:authorize")
+        reverse("idp:oidc:authorize")
         + "?"
         + urlencode(
             {
@@ -327,7 +327,7 @@ def test_implicit_grant_flow(auth_client, user, oidc_client, enable_cache):
     assert resp.status_code == HTTPStatus.OK
     assertTemplateUsed(resp, "idp/openid_connect/authorize_form.html")
     resp = auth_client.post(
-        reverse("idp:openid_connect:authorize"),
+        reverse("idp:oidc:authorize"),
         {
             "scopes": scopes,
             "action": "grant",
@@ -353,9 +353,7 @@ def test_userinfo_access_token_as_query(
     # Pass along ID token as hint
     token, _ = access_token_generator(oidc_client, user, scopes=["openid"])
     resp = client.get(
-        reverse("idp:openid_connect:userinfo")
-        + "?"
-        + urlencode({"access_token": token}),
+        reverse("idp:oidc:userinfo") + "?" + urlencode({"access_token": token}),
     )
     assert resp.status_code == HTTPStatus.UNAUTHORIZED
 
@@ -368,11 +366,9 @@ def test_authorization_post_redirects_to_get(auth_client):
         "nonce": "some-nonce",
         "state": "some-state",
     }
-    resp = auth_client.post(reverse("idp:openid_connect:authorize"), data=payload)
+    resp = auth_client.post(reverse("idp:oidc:authorize"), data=payload)
     assert resp.status_code == HTTPStatus.FOUND
-    assert resp["location"] == reverse(
-        "idp:openid_connect:authorize"
-    ) + "?" + urlencode(payload)
+    assert resp["location"] == reverse("idp:oidc:authorize") + "?" + urlencode(payload)
 
 
 def test_authorization_post_redirects_anon_to_get(db, client):
@@ -383,11 +379,9 @@ def test_authorization_post_redirects_anon_to_get(db, client):
         "nonce": "some-nonce",
         "state": "some-state",
     }
-    resp = client.post(
-        reverse("idp:openid_connect:authorize"), data=payload, follow=True
-    )
+    resp = client.post(reverse("idp:oidc:authorize"), data=payload, follow=True)
     assert resp.status_code == HTTPStatus.OK
-    url = reverse("idp:openid_connect:authorize") + "?" + urlencode(payload)
+    url = reverse("idp:oidc:authorize") + "?" + urlencode(payload)
     assert resp.redirect_chain == [
         (url, HTTPStatus.FOUND),
         (
@@ -406,7 +400,7 @@ def test_authorization_post_is_csrf_protected(user):
         "request": "dummy",
         "scopes": "openid",
     }
-    resp = client.post(reverse("idp:openid_connect:authorize"), data=payload)
+    resp = client.post(reverse("idp:oidc:authorize"), data=payload)
     assert resp.status_code == HTTPStatus.FORBIDDEN
     assert b"CSRF Failed" in resp.content
 
@@ -414,7 +408,7 @@ def test_authorization_post_is_csrf_protected(user):
 def test_refresh_token(db, client, oidc_client, user, refresh_token_factory):
     rt, _ = refresh_token_factory(user=user, client=oidc_client)
     resp = client.post(
-        reverse("idp:openid_connect:token"),
+        reverse("idp:oidc:token"),
         {
             "refresh_token": rt,
             "grant_type": "refresh_token",
@@ -435,7 +429,7 @@ def test_refresh_token(db, client, oidc_client, user, refresh_token_factory):
 def test_revoke_refresh_token(db, client, oidc_client, user, refresh_token_factory):
     token_value, token_instance = refresh_token_factory(user=user, client=oidc_client)
     resp = client.post(
-        reverse("idp:openid_connect:revoke"),
+        reverse("idp:oidc:revoke"),
         {
             "token": token_value,
             "client_id": oidc_client.id,
@@ -448,7 +442,7 @@ def test_revoke_refresh_token(db, client, oidc_client, user, refresh_token_facto
 
 
 def test_jwks_view(client):
-    resp = client.get(reverse("idp:openid_connect:jwks"))
+    resp = client.get(reverse("idp:oidc:jwks"))
     assert resp.status_code == HTTPStatus.OK
     assert resp.json() == {
         "keys": [{"e": ANY, "key_ops": ["verify"], "kid": ANY, "kty": "RSA", "n": ANY}]
@@ -456,7 +450,7 @@ def test_jwks_view(client):
 
 
 def test_configuration_view(client, oidc_client):
-    resp = client.get(reverse("idp:openid_connect:configuration"))
+    resp = client.get(reverse("idp:oidc:configuration"))
     assert resp.status_code == HTTPStatus.OK
     assert resp.json() == {
         "authorization_endpoint": "http://testserver/identity/oidc/authorize",
@@ -485,7 +479,7 @@ def test_authorization_code_flow_with_pkce(
     scopes = ["openid", "profile", "email"]
     pkce = generate_code_challenge()
     resp = auth_client.get(
-        reverse("idp:openid_connect:authorize")
+        reverse("idp:oidc:authorize")
         + "?"
         + urlencode(
             {
@@ -503,7 +497,7 @@ def test_authorization_code_flow_with_pkce(
     assert resp.status_code == HTTPStatus.OK
     assertTemplateUsed(resp, "idp/openid_connect/authorize_form.html")
     resp = auth_client.post(
-        reverse("idp:openid_connect:authorize"),
+        reverse("idp:oidc:authorize"),
         {
             "scopes": scopes,
             "action": "grant",
@@ -518,7 +512,7 @@ def test_authorization_code_flow_with_pkce(
     code = params["code"][0]
     assert params["state"][0] == "some-state"
     resp = auth_client.post(
-        reverse("idp:openid_connect:token"),
+        reverse("idp:oidc:token"),
         {
             "grant_type": "authorization_code",
             "code": code,

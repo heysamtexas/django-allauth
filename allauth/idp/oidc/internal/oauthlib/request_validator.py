@@ -52,7 +52,7 @@ class OAuthLibRequestValidator(RequestValidator):
         if nonce:
             code = dict(**code, nonce=nonce)
         # (end WORKAROUND)
-        authorization_codes.create(client_id, code, request)
+        authorization_codes.create(request.client, code, request)
 
     def authenticate_client_id(self, client_id, request, *args, **kwargs) -> bool:
         """Ensure client_id belong to a non-confidential client."""
@@ -166,7 +166,7 @@ class OAuthLibRequestValidator(RequestValidator):
     def invalidate_authorization_code(self, client_id, code, request, *args, **kwargs):
         authorization_codes.invalidate(client_id, code)
 
-    def validate_user_match(self, id_token_hint, scopes, claims, request):
+    def validate_user_match(self, id_token_hint, scopes, claims, request) -> bool:
         if not context.request.user:
             return False
         sub = None
@@ -240,13 +240,13 @@ class OAuthLibRequestValidator(RequestValidator):
         )
 
     def validate_bearer_token(self, token, scopes, request) -> bool:
+        if not token:
+            return False
         if context.request.GET.get("access_token") == token:
             # Supporting tokens in query params is considered bad practice, yet,
             # oauthlib supports this. E.g., if access tokens are sent via URI
             # query parameters, such tokens may leak to log files and the HTTP
             # 'referer'.
-            return False
-        if not token:
             return False
         instance = Token.objects.lookup(Token.Type.ACCESS_TOKEN, token)
         if not instance:
@@ -335,6 +335,17 @@ class OAuthLibRequestValidator(RequestValidator):
         return super().client_authentication_required(request, *args, **kwargs)
 
     def _lookup_client(self, request, client_id) -> Optional[Client]:
+        """
+        In various places, oauthlib documents:
+
+            Note, while not strictly necessary it can often be very convenient
+            to set request.client to the client object associated with the
+            given client_id.
+
+        It's unclear though that if this is not explicitly stated, and, we still
+        were to set request.client, whether that could have adverse side
+        effects. So, don't assign request.client here.
+        """
         cache = request._client_cache = getattr(request, "_client_cache", {})
         if client_id in cache:
             client = cache[client_id]
