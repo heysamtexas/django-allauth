@@ -30,3 +30,15 @@ def is_parsed_redirect_uri_allowed(parsed_uri: ParseResult, allowed_uri: str) ->
     ):
         return False
     return True
+
+
+def is_origin_allowed(origin: str, allowed_origins: List[str]) -> bool:
+    parsed_origin = urlparse(origin)
+    for allowed_origin in allowed_origins:
+        parsed_allowed_origin = urlparse(allowed_origin)
+        if (
+            parsed_allowed_origin.scheme == parsed_origin.scheme
+            and parsed_allowed_origin.netloc == parsed_origin.netloc
+        ):
+            return True
+    return False

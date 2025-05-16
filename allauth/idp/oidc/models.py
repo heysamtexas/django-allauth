@@ -65,6 +65,13 @@ class Client(models.Model):
     redirect_uris = models.TextField(
         help_text="A list of allowed redirect (callback) URLs, one per line."
     )
+    cors_origins = models.TextField(
+        blank=True,
+        help_text=_(
+            "A list of allowed origins for cross-origin requests, one per line."
+        ),
+        default="",
+    )
     response_types = models.TextField(
         default="code",
         help_text=_(
@@ -89,6 +96,12 @@ class Client(models.Model):
 
     def set_redirect_uris(self, uris: List[str]):
         self.redirect_uris = _values_to_text(uris)
+
+    def get_cors_origins(self) -> List[str]:
+        return _values_from_text(self.cors_origins)
+
+    def set_cors_origins(self, uris: List[str]):
+        self.cors_origins = _values_to_text(uris)
 
     def get_scopes(self) -> List[str]:
         return _values_from_text(self.scopes)

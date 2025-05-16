@@ -24,6 +24,9 @@ Grant types
       client_credentials
       refresh_token
 
+CORS origins
+    A list of allowed origins for cross-origin requests, one per line.
+
 Redirect URIs
     A list of allowed redirect (callback) URLs, one per line.
 

@@ -12,7 +12,10 @@ from allauth.core.internal import jwkkit
 from allauth.idp.oidc import app_settings
 from allauth.idp.oidc.adapter import get_adapter
 from allauth.idp.oidc.internal.claims import get_claims
-from allauth.idp.oidc.internal.clientkit import is_redirect_uri_allowed
+from allauth.idp.oidc.internal.clientkit import (
+    is_origin_allowed,
+    is_redirect_uri_allowed,
+)
 from allauth.idp.oidc.internal.oauthlib import authorization_codes
 from allauth.idp.oidc.models import Client, Token
 
@@ -217,6 +220,10 @@ class OAuthLibRequestValidator(RequestValidator):
             ret = pkce["code_challenge_method"]
         return ret
 
+    def is_pkce_required(self, client_id, request) -> bool:
+        client = self._lookup_client(request, client_id)
+        return bool(client and client.type == Client.Type.PUBLIC)
+
     def finalize_id_token(self, id_token: dict, token: dict, token_handler, request):
         """
         https://openid.net/specs/openid-connect-core-1_0.html#StandardClaims
@@ -289,18 +296,19 @@ class OAuthLibRequestValidator(RequestValidator):
     def validate_user(self, username, password, client, request, *args, **kwargs):
         """
         Note that this bypasses MFA, which is why the password grant is not
-        recommended.
-        try:
-            user = get_account_adapter().authenticate(
-                context.request, username=username, password=password
-            )
-        except ValidationError:
-            return False
-        else:
-            if not user:
+        recommended and hence disabled. This could work:
+
+            try:
+                user = get_account_adapter().authenticate(
+                    context.request, username=username, password=password
+                )
+            except ValidationError:
                 return False
-            request.user = user
-            return True
+            else:
+                if not user:
+                    return False
+                request.user = user
+                return True
         """
         return False
 
@@ -350,3 +358,7 @@ class OAuthLibRequestValidator(RequestValidator):
             authorization_code = authorization_codes.lookup(client_id, code)
             cache[key] = authorization_code
         return authorization_code
+
+    def is_origin_allowed(self, client_id, origin, request, *args, **kwargs) -> bool:
+        client = self._lookup_client(request, client_id)
+        return bool(client and is_origin_allowed(origin, client.get_cors_origins()))

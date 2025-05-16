@@ -56,6 +56,14 @@ class Migration(migrations.Migration):
                     ),
                 ),
                 (
+                    "cors_origins",
+                    models.TextField(
+                        blank=True,
+                        default="",
+                        help_text="A list of allowed origins for cross-origin requests, one per line.",
+                    ),
+                ),
+                (
                     "response_types",
                     models.TextField(
                         default="code",
