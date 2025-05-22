@@ -586,10 +586,9 @@ class DefaultAccountAdapter(BaseAdapter):
         # get_host already validates the given host, so no need to check it again
         allowed_hosts = {context.request.get_host()} | set(settings.ALLOWED_HOSTS)
 
-        # Add CSRF-trusted origins if they exist
-        if hasattr(settings, 'CSRF_TRUSTED_ORIGINS'):
-            trusted_hosts = {urlparse(origin).netloc for origin in settings.CSRF_TRUSTED_ORIGINS}
-            allowed_hosts.update(trusted_hosts)
+        # Include hosts derived from CSRF_TRUSTED_ORIGINS
+        trusted_hosts = {urlparse(origin).netloc for origin in settings.CSRF_TRUSTED_ORIGINS}
+        allowed_hosts.update(trusted_hosts)
 
         # Handle wildcard case
         if "*" in allowed_hosts:
