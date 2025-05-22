@@ -588,7 +588,9 @@ class DefaultAccountAdapter(BaseAdapter):
         allowed_hosts = {context.request.get_host()} | set(settings.ALLOWED_HOSTS)
 
         # Include hosts derived from CSRF_TRUSTED_ORIGINS
-        trusted_hosts = {urlparse(origin).netloc for origin in settings.CSRF_TRUSTED_ORIGINS}
+        trusted_hosts = {
+            urlparse(origin).netloc for origin in settings.CSRF_TRUSTED_ORIGINS
+        }
         allowed_hosts.update(trusted_hosts)
 
         # Handle wildcard case
