@@ -27,6 +27,11 @@ standalone OpenID Connect provider:
                         # token auth methods list is used
                         "token_auth_method": "client_secret_basic",
                         "oauth_pkce_enabled": True,
+                        # Optional verified_email to put the email address 
+                        # from the provider as verified.
+                        # If uncommmented, the email address will be fetched 
+                        # from the provider's user info endpoint as verified.
+                        # "verified_email": true, 
                     },
                 },
                 {
@@ -48,6 +53,26 @@ This configuration example will create two independent provider instances,
 The OpenID Connect callback URL for each configured server is at
 ``/accounts/oidc/{id}/login/callback/`` where ``{id}`` is the configured app's
 ``provider_id`` value (``my-server`` or ``other-server`` in the above example).
+
+## For Microsoft Azure Entra
+
+For single instance of Microsoft Azure Entra, you should follow `Microsoft Graph page <microsoft.html>`__.
+
+If you want to use Microsoft Azure Entra as an OpenID Connect provider, (possibly due to multiple Entra instances) you need to configure the following in the settings:
+
+.. code-block:: python
+    {
+        "server_url": "https://login.microsoftonline.com/common/v2.0", 
+        "token_auth_method": "client_secret_basic"
+    }
+
+- Make sure you change the ``common`` to your tenant id if you are using a single tenant.
+- Make sure you added the ``v2.0`` to the end of the URL. Otherwise AllAuth will not receive the email address.
+
+
+
+
+
 
 Authentication Request's Optional Parameters
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
