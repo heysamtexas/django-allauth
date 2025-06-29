@@ -22,22 +22,21 @@ Note worthy changes
   
   This is backward incompatible, consider migrating existing Soundcloud SocialAccount manually.
 
-  This can be done with:
-  ```
-  from django.db.models import F, Value
-  from django.db.models.functions import Concat
+  This can be done with::
 
-  from allauth.socialaccount.models import SocialAccount
+    from django.db.models import F, Value
+    from django.db.models.functions import Concat
+
+    from allauth.socialaccount.models import SocialAccount
 
 
-  SocialAccount.objects.filter(
-      provider="soundcloud"
-  ).exclude(
-      uid__startswith="soundcloud:users:"
-  ).update(
-      uid=Concat(Value("soundcloud:users:"), F("uid"))
-  )
-  ````
+    SocialAccount.objects.filter(
+        provider="soundcloud"
+    ).exclude(
+        uid__startswith="soundcloud:users:"
+    ).update(
+        uid=Concat(Value("soundcloud:users:"), F("uid"))
+    )
 
 
 Fixes
