@@ -150,19 +150,21 @@ def consume_email_verification_rate_limit(
     request: HttpRequest,
     email: str,
     dry_run: bool = False,
+    signup: bool = True,
     raise_exception: bool = False,
 ) -> bool:
     return ratelimit.consume(
         request,
         action="confirm_email",
         key=email.lower(),
+        limit_get=not signup,
         dry_run=dry_run,
         raise_exception=raise_exception,
     )
 
 
 def handle_verification_email_rate_limit(
-    request, email: str, raise_exception: bool = False
+    request, email: str, raise_exception: bool = False, signup: bool = False
 ) -> bool:
     """
     For email verification by link, it is not an issue if the user runs into rate
@@ -175,7 +177,7 @@ def handle_verification_email_rate_limit(
     latter was missing, fixed.
     """
     rl_ok = consume_email_verification_rate_limit(
-        request, email, raise_exception=raise_exception
+        request, email, raise_exception=raise_exception, signup=signup
     )
     if not rl_ok and app_settings.EMAIL_VERIFICATION_BY_CODE_ENABLED:
         raise ImmediateHttpResponse(ratelimit.respond_429(request))
@@ -216,13 +218,13 @@ def send_verification_email_for_user(
     address = get_address_for_user(user)
     if not address:
         return False
-    return send_verification_email_to_address(request, address)
+    return send_verification_email_to_address(request, address, signup=False)
 
 
 def send_verification_email_to_address(
     request: HttpRequest,
     address: EmailAddress,
-    signup: bool = False,
+    signup: bool = True,
     process=None,
     skip_enumeration_mails: bool = False,
 ) -> bool:
@@ -245,6 +247,7 @@ def send_verification_email_to_address(
     send = handle_verification_email_rate_limit(
         request,
         address.email,
+        signup=signup
     )
     if not send:
         return False

@@ -28,6 +28,7 @@ def consume(
     action,
     key=None,
     user=None,
+    limit_get: bool = False,
     dry_run: bool = False,
     raise_exception: bool = False,
 ) -> bool:
@@ -39,6 +40,7 @@ def consume(
         action=action,
         key=key,
         user=user,
+        limit_get=limit_get,
         dry_run=dry_run,
         raise_exception=raise_exception,
     )
