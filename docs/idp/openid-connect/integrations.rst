@@ -55,5 +55,5 @@ An example on how to use that authentication class in your own code is listed be
         authentication_classes = [TokenAuthentication]
         permission_classes = [TokenPermission.has_scope(["view-resource"])]
 
-        def get(request, *args, **kwargs):
+        def get(self, request, *args, **kwargs):
             ...
