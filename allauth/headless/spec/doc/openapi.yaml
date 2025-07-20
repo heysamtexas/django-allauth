@@ -2284,6 +2284,7 @@ components:
           type: string
           enum:
             - login
+            - login_by_code
             - mfa_authenticate
             - mfa_reauthenticate
             - provider_redirect
@@ -2299,6 +2300,11 @@ components:
           type: boolean
           enum:
             - true
+        types:
+          type: array
+          description: Matches `settings.MFA_SUPPORTED_TYPES`.
+          items:
+            $ref: "#/components/schemas/AuthenticatorType"
       required:
         - id
     Authenticated:
@@ -2804,6 +2810,7 @@ components:
       enum:
         - recovery_codes
         - totp
+        - webauthn
       description: |
         The type of authenticator.
     Password:
