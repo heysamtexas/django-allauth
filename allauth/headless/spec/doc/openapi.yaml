@@ -3367,8 +3367,8 @@ components:
               data:
                 $ref: '#/components/schemas/ReauthenticationResponse'
               status:
-                type: string
-                example: ok
+                type: integer
+                example: 200
             required:
               - data
               - status
