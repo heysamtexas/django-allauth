@@ -1969,10 +1969,7 @@ components:
             type: object
             properties:
               email:
-                type: string
-                description: |
-                  An email address.
-                example: email@domain.org
+                $ref: '#/components/schemas/Email'
             required:
               - email
     MarkPrimaryEmail:
