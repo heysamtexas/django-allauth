@@ -1308,6 +1308,8 @@ paths:
               examples:
                 invalid_code:
                   $ref: "#/components/examples/InvalidAuthenticatorCode"
+        "401":
+          $ref: "#/components/responses/ReauthenticationRequired"
         "409":
           $ref: "#/components/responses/AddAuthenticatorConflict"
     delete:
