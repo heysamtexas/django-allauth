@@ -3132,6 +3132,7 @@ components:
     SessionToken:
       in: header
       name: X-Session-Token
+      required: false
       description: |
         Session token. Only needed when `client` is equal to `app`.
       schema:
