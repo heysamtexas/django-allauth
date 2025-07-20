@@ -669,6 +669,8 @@ paths:
       parameters:
         - $ref: "#/components/parameters/Client"
         - $ref: "#/components/parameters/SessionToken"
+      requestBody:
+        $ref: '#/components/requestBodies/MFAAuthenticate'
       responses:
         "200":
           $ref: "#/components/responses/AuthenticatedByPasswordAnd2FA"
