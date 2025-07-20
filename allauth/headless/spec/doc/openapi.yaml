@@ -1375,6 +1375,7 @@ paths:
       parameters:
         - $ref: "#/components/parameters/Client"
         - $ref: "#/components/parameters/SessionToken"
+        - $ref: "#/components/parameters/PasswordLess"
       description: |
         Returns the WebAuthn credential creation options, that can be
         processed using `parseCreationOptionsFromJSON()` on the frontend.
@@ -3131,6 +3132,16 @@ components:
         Session token. Only needed when `client` is equal to `app`.
       schema:
         type: string
+    PasswordLess:
+      in: query
+      name: passwordless
+      required: false
+      schema:
+        type: boolean
+      allowEmptyValue: true
+      description: |
+        When present (regardless of its value), enables passwordless sign-in via a WebAuthn credential (Passkey),
+        but may enforce additional multi-factor authentication (MFA) requirements. Omit the parameter to disable.
   ######################################################################
   # Components: Responses
   ######################################################################
