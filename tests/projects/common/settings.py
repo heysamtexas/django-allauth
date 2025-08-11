@@ -124,6 +124,7 @@ INSTALLED_SOCIALACCOUNT_APPS: Tuple[str, ...] = (
     "allauth.socialaccount.providers.yahoo",
     "allauth.socialaccount.providers.yandex",
     "allauth.socialaccount.providers.ynab",
+    "allauth.socialaccount.providers.zitadel",
     "allauth.socialaccount.providers.zoho",
     "allauth.socialaccount.providers.zoom",
 )

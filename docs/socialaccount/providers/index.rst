@@ -152,5 +152,6 @@ Provider Specifics
    yahoo
    yandex
    ynab
+   zitadel
    zoho
    zoom

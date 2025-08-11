@@ -167,6 +167,7 @@ the ``settings.py`` of your project::
         'allauth.socialaccount.providers.yahoo',
         'allauth.socialaccount.providers.yandex',
         'allauth.socialaccount.providers.ynab',
+        'allauth.socialaccount.providers.zitadel',
         'allauth.socialaccount.providers.zoho',
         'allauth.socialaccount.providers.zoom',
         'allauth.socialaccount.providers.okta',
