@@ -117,4 +117,4 @@ version = {attr = "allauth.__version__"}
 include = ["allauth*"]
 
 [tool.setuptools.package-data]
-"*" = ["*.mo"]
+"*" = ["*.mo", "*.txt"]

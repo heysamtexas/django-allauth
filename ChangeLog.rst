@@ -12,6 +12,11 @@ Note worthy changes
   that do not have this new structure is retained.
 
 
+Fixes
+-----
+
+- pyproject.toml: Add missing templates to the distfiles
+
 65.10.0 (2025-07-10)
 ********************
 
