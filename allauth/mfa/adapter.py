@@ -39,7 +39,7 @@ class DefaultMFAAdapter(BaseAdapter):
         ),
         "incorrect_code": _("Incorrect code."),
         "unverified_email": _(
-            "You cannot activate two-factor authentication until you have verified your email address."
+            "You cannot activate two-factor authentication until you have verified all of your email addresses."
         ),
     }
     "The error messages that can occur as part of MFA form handling."
