@@ -411,6 +411,13 @@ class EmailView(AjaxCapableProcessFormViewMixin, FormView):
                 self.request, email_address
             )
         self._did_send_verification_email = did_send_verification_email
+
+        # Add user feedback when verification email is sent
+        if did_send_verification_email and email_address:
+            messages.success(
+                request, f"Verification email sent to {email_address.email}"
+            )
+
         if (
             app_settings.EMAIL_VERIFICATION_BY_CODE_ENABLED
             and did_send_verification_email

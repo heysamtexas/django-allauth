@@ -3,6 +3,7 @@ from http import HTTPStatus
 from unittest.mock import Mock
 
 from django.contrib.auth import SESSION_KEY, get_user_model
+from django.contrib.messages import get_messages
 from django.core.cache import cache
 from django.urls import reverse
 from django.utils.timezone import now
@@ -375,3 +376,28 @@ def test_verified_email_decorator__verified(auth_client):
     resp = auth_client.get(reverse("tests_account_check_verified_email"))
     assert resp.status_code == HTTPStatus.OK
     assert resp.content == b"VERIFIED"
+
+
+def test_resend_verification_email_feedback(client, user_factory, mailoutbox):
+    """Test that user receives success message when resending verification email."""
+    # Create a user with an unverified email
+    user = user_factory(email_verified=False)
+    client.force_login(user)
+
+    # Post to resend verification email
+    resp = client.post(
+        reverse("account_email"), {"email": user.email, "action_send": ""}, follow=True
+    )
+
+    # Verify the response is successful
+    assert resp.status_code == HTTPStatus.OK
+
+    # Verify email was sent
+    assert len(mailoutbox) == 1
+    assert mailoutbox[0].to == [user.email]
+
+    # Verify success message was added
+    messages = list(get_messages(resp.wsgi_request))
+    assert len(messages) == 1
+    assert messages[0].level_tag == "success"
+    assert f"Verification email sent to {user.email}" in str(messages[0])
