@@ -387,7 +387,10 @@ class EmailView(AjaxCapableProcessFormViewMixin, FormView):
             # we'll have to call invoke it manually...
             res = _ajax_response(request, res, data=self._get_ajax_data_if())
         else:
-            # No email address selected
+            # No email address selected - add error message
+            messages.error(
+                request, "Please select an email address to resend verification."
+            )
             res = HttpResponseRedirect(self.success_url)
             res = _ajax_response(request, res, data=self._get_ajax_data_if())
         return res
@@ -406,11 +409,23 @@ class EmailView(AjaxCapableProcessFormViewMixin, FormView):
     def _action_send(self, request, *args, **kwargs):
         email_address = self._get_email_address(request)
         did_send_verification_email = False
+        
         if email_address:
             did_send_verification_email = send_verification_email_to_address(
                 self.request, email_address
             )
+        else:
+            # Email not found or invalid - add error message
+            messages.error(request, "Email address not found.")
+            
         self._did_send_verification_email = did_send_verification_email
+
+        if email_address and not did_send_verification_email:
+            # Email found but send failed - add error message
+            messages.error(
+                request,
+                f"Failed to send verification email to {email_address.email}. Please try again.",
+            )
         if (
             app_settings.EMAIL_VERIFICATION_BY_CODE_ENABLED
             and did_send_verification_email

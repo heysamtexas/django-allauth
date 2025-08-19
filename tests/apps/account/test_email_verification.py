@@ -3,6 +3,7 @@ from http import HTTPStatus
 from unittest.mock import Mock
 
 from django.contrib.auth import SESSION_KEY, get_user_model
+from django.contrib.messages import get_messages
 from django.core.cache import cache
 from django.urls import reverse
 from django.utils.timezone import now
@@ -375,3 +376,87 @@ def test_verified_email_decorator__verified(auth_client):
     resp = auth_client.get(reverse("tests_account_check_verified_email"))
     assert resp.status_code == HTTPStatus.OK
     assert resp.content == b"VERIFIED"
+
+
+def test_resend_verification_email_no_selection_error(client, user_factory):
+    """Test that user receives error message when no email is selected."""
+    # Create a user with an unverified email
+    user = user_factory(email_verified=False)
+    client.force_login(user)
+
+    # Post without selecting an email (no 'email' in POST data)
+    resp = client.post(reverse("account_email"), {"action_send": ""}, follow=True)
+
+    # Verify the response is successful (redirects back to email page)
+    assert resp.status_code == HTTPStatus.OK
+
+    # Verify error message was added
+    messages = list(get_messages(resp.wsgi_request))
+    assert len(messages) == 1
+    assert messages[0].level_tag == "error"
+    assert "Please select an email address to resend verification." in str(messages[0])
+
+
+def test_resend_verification_email_not_found_error(client, user_factory):
+    """Test that user receives error message when email is not found."""
+    # Create a user with a verified email
+    user = user_factory(email_verified=True)
+    client.force_login(user)
+
+    # Try to resend verification for an email that doesn't exist for this user
+    resp = client.post(
+        reverse("account_email"),
+        {"email": "nonexistent@example.com", "action_send": ""},
+        follow=True,
+    )
+
+    # Verify the response is successful (redirects back to email page)
+    assert resp.status_code == HTTPStatus.OK
+
+    # Verify error message was added
+    messages = list(get_messages(resp.wsgi_request))
+    assert len(messages) == 1
+    assert messages[0].level_tag == "error"
+    assert "Email address not found." in str(messages[0])
+
+
+def test_resend_verification_email_send_failure_error(
+    client, user_factory, mailoutbox, monkeypatch
+):
+    """Test that user receives error message when email sending fails."""
+    from allauth.account.internal.flows.email_verification import (
+        send_verification_email_to_address,
+    )
+
+    # Create a user with an unverified email
+    user = user_factory(email_verified=False)
+    client.force_login(user)
+
+    # Mock the email sending function to return False (send failed)
+    def mock_send_verification_email_to_address(request, email_address):
+        return False
+
+    monkeypatch.setattr(
+        "allauth.account.views.send_verification_email_to_address",
+        mock_send_verification_email_to_address,
+    )
+
+    # Post to resend verification email
+    resp = client.post(
+        reverse("account_email"), {"email": user.email, "action_send": ""}, follow=True
+    )
+
+    # Verify the response is successful
+    assert resp.status_code == HTTPStatus.OK
+
+    # Verify no email was sent
+    assert len(mailoutbox) == 0
+
+    # Verify error message was added
+    messages = list(get_messages(resp.wsgi_request))
+    assert len(messages) == 1
+    assert messages[0].level_tag == "error"
+    assert (
+        f"Failed to send verification email to {user.email}. Please try again."
+        in str(messages[0])
+    )
